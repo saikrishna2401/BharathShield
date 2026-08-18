@@ -51,28 +51,30 @@ export default function DemoPresetBar({ onSelectPreset }) {
   ];
 
   return (
-    <div className="mb-6 p-4 rounded-xl bg-slate-900/90 border border-cyan-500/20">
+    <div className="mb-6 p-4.5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-cyan-500/25 shadow-xl shadow-cyan-500/5">
       <div className="flex items-center gap-2 mb-3">
-        <Zap className="w-4 h-4 text-cyan-400" />
-        <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-300">
+        <div className="p-1 rounded bg-cyan-500/20 text-cyan-400">
+          <Zap className="w-4 h-4" />
+        </div>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-300 font-mono">
           {t('analyzer.presetsTitle')}
         </h3>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2.5">
         {presets.map((p) => (
           <button
             key={p.id}
             onClick={() => onSelectPreset(p.sender, p.message)}
-            className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+            className={`text-xs font-medium px-3.5 py-2 rounded-xl border transition-all flex items-center gap-2 shadow-sm ${
               p.type === 'phishing'
-                ? 'bg-rose-950/40 text-rose-300 border-rose-800/40 hover:bg-rose-900/60 hover:border-rose-500'
-                : 'bg-emerald-950/40 text-emerald-300 border-emerald-800/40 hover:bg-emerald-900/60 hover:border-emerald-500'
+                ? 'bg-rose-950/40 text-rose-200 border-rose-800/50 hover:bg-rose-900/60 hover:border-rose-400 hover:shadow-rose-900/30'
+                : 'bg-emerald-950/40 text-emerald-200 border-emerald-800/50 hover:bg-emerald-900/60 hover:border-emerald-400 hover:shadow-emerald-900/30'
             }`}
           >
             {p.type === 'phishing' ? (
-              <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
+              <AlertOctagon className="w-3.5 h-3.5 text-rose-400 shrink-0" />
             ) : (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             )}
             <span>{t(p.labelKey)}</span>
           </button>

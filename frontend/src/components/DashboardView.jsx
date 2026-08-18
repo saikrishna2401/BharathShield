@@ -30,62 +30,62 @@ export default function DashboardView() {
   ];
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-white font-display flex items-center gap-2">
+        <h2 className="text-xl font-bold text-white font-display flex items-center gap-2.5">
           <LayoutDashboard className="w-6 h-6 text-cyan-400" />
           <span>{t('dashboard.title')}</span>
         </h2>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-400 mt-0.5">
           {t('dashboard.subtitle')}
         </p>
       </div>
 
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="cyber-card p-4">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+        <div className="cyber-card p-5">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-mono">
             {t('dashboard.totalAnalyzed')}
           </span>
-          <div className="text-2xl font-black text-white font-mono">{stats.totalAnalyzed}</div>
+          <div className="text-3xl font-black text-white font-mono">{stats.totalAnalyzed}</div>
         </div>
 
-        <div className="cyber-card p-4 border-emerald-500/30">
-          <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider block mb-1 flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5" />
+        <div className="cyber-card p-5 border-emerald-500/30">
+          <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block mb-1 font-mono flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4" />
             {t('dashboard.safeCount')}
           </span>
-          <div className="text-2xl font-black text-emerald-400 font-mono">{stats.safeCount}</div>
+          <div className="text-3xl font-black text-emerald-400 font-mono">{stats.safeCount}</div>
         </div>
 
-        <div className="cyber-card p-4 border-amber-500/30">
-          <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider block mb-1 flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5" />
+        <div className="cyber-card p-5 border-amber-500/30">
+          <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider block mb-1 font-mono flex items-center gap-1.5">
+            <AlertTriangle className="w-4 h-4" />
             {t('dashboard.suspiciousCount')}
           </span>
-          <div className="text-2xl font-black text-amber-400 font-mono">{stats.suspiciousCount}</div>
+          <div className="text-3xl font-black text-amber-400 font-mono">{stats.suspiciousCount}</div>
         </div>
 
-        <div className="cyber-card p-4 border-rose-500/30">
-          <span className="text-[11px] font-semibold text-rose-400 uppercase tracking-wider block mb-1 flex items-center gap-1">
-            <AlertOctagon className="w-3.5 h-3.5" />
+        <div className="cyber-card p-5 border-rose-500/30">
+          <span className="text-[11px] font-bold text-rose-400 uppercase tracking-wider block mb-1 font-mono flex items-center gap-1.5">
+            <AlertOctagon className="w-4 h-4" />
             {t('dashboard.phishingCount')}
           </span>
-          <div className="text-2xl font-black text-rose-400 font-mono">{stats.phishingCount}</div>
+          <div className="text-3xl font-black text-rose-400 font-mono">{stats.phishingCount}</div>
         </div>
       </div>
 
       {!hasData ? (
-        <div className="cyber-card p-12 text-center text-slate-500">
-          <BarChart3 className="w-12 h-12 text-slate-600 mx-auto mb-3 opacity-50" />
+        <div className="cyber-card p-12 text-center text-slate-500 space-y-3">
+          <BarChart3 className="w-12 h-12 text-slate-600 mx-auto opacity-40" />
           <p className="text-sm font-medium">{t('dashboard.noData')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Risk Distribution Pie Chart */}
-          <div className="cyber-card p-5">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <div className="cyber-card p-6">
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4 font-mono flex items-center gap-2">
               <PieChartIcon className="w-4 h-4 text-cyan-400" />
               <span>{t('dashboard.riskBreakdown')}</span>
             </h3>
@@ -97,8 +97,8 @@ export default function DashboardView() {
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
+                    outerRadius={85}
+                    paddingAngle={6}
                     dataKey="value"
                   >
                     {pieData.map((entry, index) => (
@@ -106,7 +106,7 @@ export default function DashboardView() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
+                    contentStyle={{ backgroundColor: '#050811', borderColor: '#334155', borderRadius: '12px', color: '#f1f5f9' }}
                     itemStyle={{ color: '#f1f5f9' }}
                   />
                 </PieChart>
@@ -115,21 +115,21 @@ export default function DashboardView() {
           </div>
 
           {/* Regional Language Bar Chart */}
-          <div className="cyber-card p-5">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <div className="cyber-card p-6">
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4 font-mono flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-cyan-400" />
               <span>{t('dashboard.langBreakdown')}</span>
             </h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={langData}>
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
-                  <YAxis stroke="#94a3b8" fontSize={12} />
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
+                  <YAxis stroke="#64748b" fontSize={12} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
+                    contentStyle={{ backgroundColor: '#050811', borderColor: '#334155', borderRadius: '12px', color: '#06b6d4' }}
                     itemStyle={{ color: '#06b6d4' }}
                   />
-                  <Bar dataKey="count" fill="#06b6d4" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="count" fill="#06b6d4" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

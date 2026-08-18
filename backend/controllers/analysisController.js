@@ -52,7 +52,7 @@ async function handleHealthCheck(req, res) {
     status: 'ok',
     service: 'PhishGuard Detection API',
     version: '2.0.0-Enhanced',
-    database: storageService.useMemory ? 'memory' : 'mongodb',
+    database: storageService.activeDatabaseMode,
     ml: 'unavailable (Rule-based fallback active)',
     timestamp: new Date().toISOString()
   });

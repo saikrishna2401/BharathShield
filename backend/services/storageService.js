@@ -1,7 +1,9 @@
 /**
  * Storage Service Module for PhishGuard
- * Provides zero-config dual storage: Mongoose MongoDB store when available,
- * with automatic, privacy-compliant in-memory fallback for standalone execution.
+ * Provides zero-config multi-storage support:
+ * 1. Supabase PostgreSQL Store (when SUPABASE_URL & SUPABASE_KEY environment variables are present)
+ * 2. Mongoose MongoDB Store (when MONGODB_URI is connected)
+ * 3. In-Memory Store (privacy-compliant zero-config fallback)
  * Stores language-neutral identifiers only.
  */
 
@@ -9,21 +11,46 @@ const crypto = require('crypto');
 
 class StorageService {
   constructor() {
-    this.useMemory = true;
+    this.storageMode = 'memory'; // 'supabase' | 'mongodb' | 'memory'
+    this.supabaseClient = null;
     this.memoryHistory = [];
     this.memoryReports = [];
     this.historyIdCounter = 1;
     this.reportIdCounter = 1;
     this.historyEnabled = true;
+
+    this.initSupabase();
+  }
+
+  initSupabase() {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseUrl && supabaseKey) {
+      try {
+        const { createClient } = require('@supabase/supabase-js');
+        this.supabaseClient = createClient(supabaseUrl, supabaseKey);
+        this.storageMode = 'supabase';
+        console.log(`[StorageService] Active Storage Mode: SUPABASE POSTGRESQL (${supabaseUrl})`);
+      } catch (err) {
+        console.warn('[StorageService] Failed to initialize Supabase client:', err.message);
+      }
+    }
   }
 
   setMongoAvailable(status) {
-    this.useMemory = !status;
-    console.log(`[StorageService] Active Storage Mode: ${this.useMemory ? 'IN-MEMORY STORE' : 'MONGODB'}`);
+    if (this.storageMode !== 'supabase') {
+      this.storageMode = status ? 'mongodb' : 'memory';
+      console.log(`[StorageService] Active Storage Mode: ${this.storageMode.toUpperCase()}`);
+    }
   }
 
   setHistoryEnabled(enabled) {
     this.historyEnabled = !!enabled;
+  }
+
+  get activeDatabaseMode() {
+    return this.storageMode;
   }
 
   hashMessage(text) {
@@ -64,31 +91,69 @@ class StorageService {
       signalCount: analysisData.signals ? analysisData.signals.length : 0
     };
 
-    if (this.useMemory) {
+    if (this.storageMode === 'supabase' && this.supabaseClient) {
+      try {
+        const { error } = await this.supabaseClient
+          .from('phishguard_history')
+          .insert([record]);
+        if (error) {
+          console.warn('[Supabase Insert Error]:', error.message);
+          this.memoryHistory.unshift(record);
+        }
+      } catch (e) {
+        this.memoryHistory.unshift(record);
+      }
+    } else {
       this.memoryHistory.unshift(record);
       if (this.memoryHistory.length > 100) {
         this.memoryHistory.pop();
       }
-      return record;
-    } else {
-      return record;
     }
+
+    return record;
   }
 
   async getHistory() {
+    if (this.storageMode === 'supabase' && this.supabaseClient) {
+      try {
+        const { data, error } = await this.supabaseClient
+          .from('phishguard_history')
+          .select('*')
+          .order('timestamp', { ascending: false })
+          .limit(100);
+        if (!error && Array.isArray(data)) {
+          return data;
+        }
+      } catch (e) {
+        // Fallback to memory history on network failure
+      }
+    }
     return [...this.memoryHistory];
   }
 
   async deleteHistoryItem(id) {
-    if (this.useMemory) {
-      const initLen = this.memoryHistory.length;
-      this.memoryHistory = this.memoryHistory.filter(item => item.id !== id);
-      return this.memoryHistory.length < initLen;
+    if (this.storageMode === 'supabase' && this.supabaseClient) {
+      try {
+        await this.supabaseClient
+          .from('phishguard_history')
+          .delete()
+          .eq('id', id);
+      } catch (e) {}
     }
+    const initLen = this.memoryHistory.length;
+    this.memoryHistory = this.memoryHistory.filter(item => item.id !== id);
     return true;
   }
 
   async clearAllHistory() {
+    if (this.storageMode === 'supabase' && this.supabaseClient) {
+      try {
+        await this.supabaseClient
+          .from('phishguard_history')
+          .delete()
+          .neq('id', '');
+      } catch (e) {}
+    }
     this.memoryHistory = [];
     return true;
   }
@@ -97,20 +162,27 @@ class StorageService {
     const reportRecord = {
       id: `RPT-${Date.now()}-${this.reportIdCounter++}`,
       timestamp: new Date().toISOString(),
-      category: reportPayload.category || 'Other',
+      categoryKey: reportPayload.categoryKey || 'UNKNOWN',
       sender: reportPayload.sender || 'Unknown',
       preview: this.sanitizeMessagePreview(reportPayload.message),
       description: reportPayload.description || '',
-      hasScreenshot: !!reportPayload.hasScreenshot,
       status: 'RECORDED'
     };
+
+    if (this.storageMode === 'supabase' && this.supabaseClient) {
+      try {
+        await this.supabaseClient
+          .from('phishguard_reports')
+          .insert([reportRecord]);
+      } catch (e) {}
+    }
 
     this.memoryReports.unshift(reportRecord);
     return reportRecord;
   }
 
   async getStatistics() {
-    const history = this.memoryHistory;
+    const history = await this.getHistory();
     const total = history.length;
 
     if (total === 0) {
@@ -135,7 +207,7 @@ class StorageService {
     const scamCounts = {};
 
     for (const item of history) {
-      totalScore += item.riskScore;
+      totalScore += (item.riskScore || 0);
       if (item.riskLevel === 'SAFE') safeCount++;
       else if (item.riskLevel === 'SUSPICIOUS') suspiciousCount++;
       else if (item.riskLevel === 'PHISHING') phishingCount++;

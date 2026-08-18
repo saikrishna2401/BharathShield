@@ -21,26 +21,26 @@ export default function HowItWorksView() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-white font-display flex items-center gap-2">
+        <h2 className="text-xl font-bold text-white font-display flex items-center gap-2.5">
           <Cpu className="w-6 h-6 text-cyan-400" />
           <span>{t('howItWorks.title')}</span>
         </h2>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-400 mt-0.5">
           {t('howItWorks.subtitle')}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5">
         {steps.map((s) => (
-          <div key={s.num} className="cyber-card p-4 border-slate-800 flex items-start gap-4">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-400 font-mono font-bold text-xs flex items-center justify-center shrink-0 border border-cyan-500/20">
+          <div key={s.num} className="cyber-card p-5 border-slate-800/80 flex items-start gap-4 shadow-xl hover:border-cyan-500/40 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/10 text-cyan-300 font-mono font-black text-xs flex items-center justify-center shrink-0 border border-cyan-500/30 shadow-md shadow-cyan-500/10">
               {s.num}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-200 font-display">
+              <h3 className="text-sm font-bold text-slate-100 font-display">
                 {t(s.titleKey)}
               </h3>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed font-medium">
                 {t(s.descKey)}
               </p>
             </div>
