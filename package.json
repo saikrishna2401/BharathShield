@@ -1,0 +1,13 @@
+{
+  "name": "phishguard-root",
+  "version": "2.0.0",
+  "description": "PhishGuard Root Launcher - Starts Backend & Frontend in a single command",
+  "scripts": {
+    "start": "npx concurrently --kill-others \"npm start --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev": "npx concurrently --kill-others \"npm start --prefix backend\" \"npm run dev --prefix frontend\"",
+    "test": "npm test --prefix backend"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "testCases": [
+    {
+      "id": "SAFE-EN-1",
+      "language": "en",
+      "expectedLevel": "SAFE",
+      "sender": "VK-SBIINB",
+      "message": "Your OTP for net banking login is 483921. Do not share this OTP with anyone for security."
+    },
+    {
+      "id": "PHISH-EN-1",
+      "language": "en",
+      "expectedLevel": "PHISHING",
+      "sender": "9876543210",
+      "message": "Congratulations! You won ₹25,00,000 lottery reward. Click this link immediately to verify your KYC: http://sbi-kyc-verification.example.xyz"
+    },
+    {
+      "id": "SAFE-TE-1",
+      "language": "te",
+      "expectedLevel": "SAFE",
+      "sender": "AX-HDFCBK",
+      "message": "మీ ఖాతాలో ₹5,000 డిపాజిట్ చేయబడింది. వివరాల కోసం నెట్ బ్యాంకింగ్ చూడండి."
+    },
+    {
+      "id": "PHISH-TE-1",
+      "language": "te",
+      "expectedLevel": "PHISHING",
+      "sender": "9123456789",
+      "message": "మీ బ్యాంక్ ఖాతా ఈరోజు బ్లాక్ అవుతుంది. బహుమతి పొందడానికి మరియు KYC పూర్తి చేయడానికి వెంటనే ఈ లింక్పై క్లిక్ చేయండి: http://secure-bank-login.top"
+    },
+    {
+      "id": "SAFE-HI-1",
+      "language": "hi",
+      "expectedLevel": "SAFE",
+      "sender": "VK-ICICIB",
+      "message": "आपका ओटीपी 849201 है। लॉगिन पूरा करने के लिए इसका उपयोग करें। अपना ओटीपी किसी के साथ साझा न करें।"
+    },
+    {
+      "id": "PHISH-HI-1",
+      "language": "hi",
+      "expectedLevel": "PHISHING",
+      "sender": "9988776655",
+      "message": "बधाई हो! आपने ₹10,00,000 जीते हैं। अपना इनाम पाने के लिए तुरंत इस लिंक पर क्लिक करें और केवाईसी अपडेट करें: http://gift-reward-claim.xyz"
+    },
+    {
+      "id": "SAFE-TA-1",
+      "language": "ta",
+      "expectedLevel": "SAFE",
+      "sender": "AD-INDPOST",
+      "message": "உங்கள் பார்சல் 62810 விநியோகத்திற்கு தயாராக உள்ளது. கண்காணிப்புக்கு அதிகாரப்பூர்வ ஆப்பை பயன்படுத்தவும்."
+    },
+    {
+      "id": "PHISH-TA-1",
+      "language": "ta",
+      "expectedLevel": "PHISHING",
+      "sender": "9444012345",
+      "message": "வாழ்த்துகள்! நீங்கள் ₹10,00,000 வென்றுள்ளீர்கள். பரிசைப் பெற உடனடியாக இந்த இணைப்பைக் கிளிக் செய்து விவரங்களை புதுப்பிக்கவும்: http://bank-kyc-update.site"
+    },
+    {
+      "id": "MIXED-PHISH-1",
+      "language": "mixed",
+      "expectedLevel": "PHISHING",
+      "sender": "9811223344",
+      "message": "మీ account block అవుతుంది. Click this link immediately to verify KYC: http://bit.ly/fake-bank"
+    }
+  ]
+}
