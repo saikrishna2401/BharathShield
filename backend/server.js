@@ -26,7 +26,8 @@ app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: false
+  crossOriginOpenerPolicy: false,
+  noSniff: false // Prevents MIME type mismatch blocking for CSS stylesheets
 }));
 
 app.use(cors({
@@ -60,17 +61,40 @@ app.use('/api', apiRoutes);
 const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
 if (fs.existsSync(frontendDistPath)) {
   console.log(`[Production] Serving frontend static assets from: ${frontendDistPath}`);
-  
-  // Serve static files from dist directory
+
+  // Explicitly mount /assets folder with correct MIME types for CSS & JS
+  const assetsPath = path.join(frontendDistPath, 'assets');
+  if (fs.existsSync(assetsPath)) {
+    app.use('/assets', express.static(assetsPath, {
+      maxAge: '1y',
+      immutable: true,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.css')) {
+          res.setHeader('Content-Type', 'text/css; charset=UTF-8');
+        } else if (filePath.endsWith('.js')) {
+          res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
+        }
+      }
+    }));
+  }
+
+  // Serve all static root files (logo.png, index.html, favicon, etc.)
   app.use(express.static(frontendDistPath, {
     maxAge: '1d',
-    etag: true
+    etag: true,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css; charset=UTF-8');
+      } else if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
+      }
+    }
   }));
 
   // Handle SPA routing: serve index.html for all non-API and non-static asset routes
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) return next();
-    // Prevent serving index.html for missing asset files (avoids Unexpected token '<' JS errors)
+    // Do NOT serve index.html for missing asset files (avoids Unexpected token '<' JS errors)
     if (/\.(js|css|png|jpg|jpeg|gif|ico|svg|json|woff2?|ttf|eot)$/i.test(req.path)) {
       return res.status(404).send('Asset not found');
     }
