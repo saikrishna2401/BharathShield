@@ -12,6 +12,7 @@ import StaySafeView from './components/StaySafeView';
 import HowItWorksView from './components/HowItWorksView';
 import ReportModal from './components/ReportModal';
 import SettingsView from './components/SettingsView';
+import Toast from './components/Toast';
 
 import { checkBackendHealth, analyzeSMS } from './services/apiService';
 
@@ -26,14 +27,24 @@ export default function App() {
   const [prefillSender, setPrefillSender] = useState('');
   const [prefillMessage, setPrefillMessage] = useState('');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     checkBackendHealth().then(setHealthStatus);
   }, []);
 
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(prev => (prev && prev.message === message ? null : prev));
+    }, 3000);
+  };
+
   const handleLanguageChange = (newLang) => {
     setCurrentLang(newLang);
     i18n.changeLanguage(newLang);
+    const langNames = { en: 'English', te: 'Telugu', hi: 'Hindi', ta: 'Tamil' };
+    showToast(`Language switched to ${langNames[newLang] || newLang}`, 'success');
   };
 
   const handleAnalyze = async (payload) => {
@@ -48,6 +59,15 @@ export default function App() {
     setAnalysisResult(res);
     setIsLoading(false);
 
+    showToast(
+      res.riskLevel === 'SAFE'
+        ? 'Analysis Complete: Message is SAFE'
+        : res.riskLevel === 'SUSPICIOUS'
+        ? 'Warning: Suspicious SMS patterns detected'
+        : 'ALERT: Phishing scam threat detected!',
+      res.riskLevel === 'SAFE' ? 'success' : res.riskLevel === 'SUSPICIOUS' ? 'warning' : 'error'
+    );
+
     // Auto-scroll to results card
     setTimeout(() => {
       const el = document.getElementById('analysis-results');
@@ -60,7 +80,7 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col lang-${currentLang}`}>
+    <div className={`min-h-screen bg-slate-50 text-slate-900 flex flex-col lang-${currentLang} selection:bg-teal-100 selection:text-teal-900`}>
       {/* Top Header */}
       <Header
         healthStatus={healthStatus}
@@ -84,6 +104,7 @@ export default function App() {
                 isLoading={isLoading}
                 prefillSender={prefillSender}
                 prefillMessage={prefillMessage}
+                onShowToast={showToast}
               />
 
               <div id="analysis-results">
@@ -91,6 +112,7 @@ export default function App() {
                   <DetectionResultCard
                     result={analysisResult}
                     onReportScam={handleOpenReport}
+                    onShowToast={showToast}
                   />
                 )}
               </div>
@@ -98,13 +120,13 @@ export default function App() {
           )}
 
           {/* View: History */}
-          {activeTab === 'history' && <HistoryView />}
+          {activeTab === 'history' && <HistoryView onShowToast={showToast} />}
 
           {/* View: Dashboard */}
           {activeTab === 'dashboard' && <DashboardView />}
 
           {/* View: Stay Safe */}
-          {activeTab === 'learn' && <StaySafeView />}
+          {activeTab === 'learn' && <StaySafeView onShowToast={showToast} />}
 
           {/* View: How It Works */}
           {activeTab === 'howItWorks' && <HowItWorksView />}
@@ -116,6 +138,7 @@ export default function App() {
                 isOpen={true}
                 onClose={() => setActiveTab('analyze')}
                 initialData={analysisResult}
+                onShowToast={showToast}
               />
             </div>
           )}
@@ -125,6 +148,7 @@ export default function App() {
             <SettingsView
               currentLang={currentLang}
               onLanguageChange={handleLanguageChange}
+              onShowToast={showToast}
             />
           )}
 
@@ -137,8 +161,12 @@ export default function App() {
           isOpen={isReportModalOpen}
           onClose={() => setIsReportModalOpen(false)}
           initialData={analysisResult}
+          onShowToast={showToast}
         />
       )}
+
+      {/* Global Toast Notification */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

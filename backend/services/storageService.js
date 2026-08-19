@@ -1,17 +1,19 @@
 /**
- * Storage Service Module for PhishGuard
+ * Storage Service Module for BharathShield
  * Provides zero-config multi-storage support:
  * 1. Supabase PostgreSQL Store (when SUPABASE_URL & SUPABASE_KEY environment variables are present)
  * 2. Mongoose MongoDB Store (when MONGODB_URI is connected)
- * 3. In-Memory Store (privacy-compliant zero-config fallback)
+ * 3. Local Persistent File Database (`backend/data/database.json` - zero-config disk storage)
  * Stores language-neutral identifiers only.
  */
 
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 class StorageService {
   constructor() {
-    this.storageMode = 'memory'; // 'supabase' | 'mongodb' | 'memory'
+    this.storageMode = 'local_file'; // 'supabase' | 'mongodb' | 'local_file'
     this.supabaseClient = null;
     this.memoryHistory = [];
     this.memoryReports = [];
@@ -19,7 +21,47 @@ class StorageService {
     this.reportIdCounter = 1;
     this.historyEnabled = true;
 
+    this.dbFilePath = path.join(__dirname, '..', 'data', 'database.json');
+    this.initFileStore();
     this.initSupabase();
+  }
+
+  initFileStore() {
+    try {
+      const dataDir = path.dirname(this.dbFilePath);
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+
+      if (fs.existsSync(this.dbFilePath)) {
+        const raw = fs.readFileSync(this.dbFilePath, 'utf8');
+        const parsed = JSON.parse(raw);
+        this.memoryHistory = Array.isArray(parsed.history) ? parsed.history : [];
+        this.memoryReports = Array.isArray(parsed.reports) ? parsed.reports : [];
+        this.historyIdCounter = parsed.historyIdCounter || this.memoryHistory.length + 1;
+        this.reportIdCounter = parsed.reportIdCounter || this.memoryReports.length + 1;
+        console.log(`[StorageService] Loaded ${this.memoryHistory.length} history items and ${this.memoryReports.length} reports from local database (${this.dbFilePath})`);
+      } else {
+        this.saveToFile();
+      }
+    } catch (err) {
+      console.warn('[StorageService] Local file storage initialization notice:', err.message);
+    }
+  }
+
+  saveToFile() {
+    try {
+      const payload = {
+        updatedAt: new Date().toISOString(),
+        historyIdCounter: this.historyIdCounter,
+        reportIdCounter: this.reportIdCounter,
+        history: this.memoryHistory,
+        reports: this.memoryReports
+      };
+      fs.writeFileSync(this.dbFilePath, JSON.stringify(payload, null, 2), 'utf8');
+    } catch (err) {
+      console.error('[StorageService] Error persisting to local database file:', err.message);
+    }
   }
 
   initSupabase() {
@@ -40,7 +82,7 @@ class StorageService {
 
   setMongoAvailable(status) {
     if (this.storageMode !== 'supabase') {
-      this.storageMode = status ? 'mongodb' : 'memory';
+      this.storageMode = status ? 'mongodb' : 'local_file';
       console.log(`[StorageService] Active Storage Mode: ${this.storageMode.toUpperCase()}`);
     }
   }
@@ -94,20 +136,23 @@ class StorageService {
     if (this.storageMode === 'supabase' && this.supabaseClient) {
       try {
         const { error } = await this.supabaseClient
-          .from('phishguard_history')
+          .from('bharathshield_history')
           .insert([record]);
         if (error) {
           console.warn('[Supabase Insert Error]:', error.message);
           this.memoryHistory.unshift(record);
+          this.saveToFile();
         }
       } catch (e) {
         this.memoryHistory.unshift(record);
+        this.saveToFile();
       }
     } else {
       this.memoryHistory.unshift(record);
-      if (this.memoryHistory.length > 100) {
+      if (this.memoryHistory.length > 200) {
         this.memoryHistory.pop();
       }
+      this.saveToFile();
     }
 
     return record;
@@ -117,7 +162,7 @@ class StorageService {
     if (this.storageMode === 'supabase' && this.supabaseClient) {
       try {
         const { data, error } = await this.supabaseClient
-          .from('phishguard_history')
+          .from('bharathshield_history')
           .select('*')
           .order('timestamp', { ascending: false })
           .limit(100);
@@ -125,7 +170,7 @@ class StorageService {
           return data;
         }
       } catch (e) {
-        // Fallback to memory history on network failure
+        // Fallback to local history
       }
     }
     return [...this.memoryHistory];
@@ -135,13 +180,13 @@ class StorageService {
     if (this.storageMode === 'supabase' && this.supabaseClient) {
       try {
         await this.supabaseClient
-          .from('phishguard_history')
+          .from('bharathshield_history')
           .delete()
           .eq('id', id);
       } catch (e) {}
     }
-    const initLen = this.memoryHistory.length;
     this.memoryHistory = this.memoryHistory.filter(item => item.id !== id);
+    this.saveToFile();
     return true;
   }
 
@@ -149,12 +194,13 @@ class StorageService {
     if (this.storageMode === 'supabase' && this.supabaseClient) {
       try {
         await this.supabaseClient
-          .from('phishguard_history')
+          .from('bharathshield_history')
           .delete()
           .neq('id', '');
       } catch (e) {}
     }
     this.memoryHistory = [];
+    this.saveToFile();
     return true;
   }
 
@@ -172,12 +218,13 @@ class StorageService {
     if (this.storageMode === 'supabase' && this.supabaseClient) {
       try {
         await this.supabaseClient
-          .from('phishguard_reports')
+          .from('bharathshield_reports')
           .insert([reportRecord]);
       } catch (e) {}
     }
 
     this.memoryReports.unshift(reportRecord);
+    this.saveToFile();
     return reportRecord;
   }
 

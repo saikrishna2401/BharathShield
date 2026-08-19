@@ -21,26 +21,26 @@ export default function HowItWorksView() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-white font-display flex items-center gap-2.5">
-          <Cpu className="w-6 h-6 text-cyan-400" />
+        <h2 className="text-xl font-bold text-slate-900 font-display flex items-center gap-2.5">
+          <Cpu className="w-5 h-5 text-teal-600" />
           <span>{t('howItWorks.title')}</span>
         </h2>
-        <p className="text-xs text-slate-400 mt-0.5">
+        <p className="text-xs text-slate-500 mt-0.5 font-medium">
           {t('howItWorks.subtitle')}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {steps.map((s) => (
-          <div key={s.num} className="cyber-card p-5 border-slate-800/80 flex items-start gap-4 shadow-xl hover:border-cyan-500/40 transition-all">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/10 text-cyan-300 font-mono font-black text-xs flex items-center justify-center shrink-0 border border-cyan-500/30 shadow-md shadow-cyan-500/10">
+          <div key={s.num} className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex items-start gap-4 hover:border-teal-500/50 transition-all">
+            <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-800 font-mono font-bold text-xs flex items-center justify-center shrink-0 border border-teal-200/80 shadow-xs">
               {s.num}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-100 font-display">
+              <h3 className="text-sm font-bold text-slate-900 font-display">
                 {t(s.titleKey)}
               </h3>
-              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed font-medium">
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed font-medium">
                 {t(s.descKey)}
               </p>
             </div>

@@ -1,5 +1,5 @@
 /**
- * Report Controller for PhishGuard API
+ * Report Controller for BharathShield API
  */
 
 const storageService = require('../services/storageService');
@@ -25,7 +25,7 @@ async function handleReport(req, res) {
 
     return res.status(201).json({
       success: true,
-      message: 'Report recorded successfully in PhishGuard local database. Thank you for contributing to community threat intelligence.',
+      message: 'Report recorded successfully in BharathShield local database. Thank you for contributing to community threat intelligence.',
       report: reportRecord
     });
   } catch (error) {

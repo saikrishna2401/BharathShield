@@ -1,5 +1,5 @@
 /**
- * PhishGuard Backend Server Entry Point
+ * BharathShield Backend Server Entry Point
  * Enterprise Express.js app featuring security hardening (Helmet, CORS, Rate Limiting, Body limits)
  * and dual storage initialization (MongoDB with zero-config memory fallback).
  */
@@ -51,7 +51,7 @@ app.use('/api', apiRoutes);
 // Root Route
 app.get('/', (req, res) => {
   res.json({
-    app: 'PhishGuard Backend Server',
+    app: 'BharathShield Backend Server',
     tagline: 'Understand. Detect. Stay Safe.',
     version: '2.0.0-Enhanced',
     status: 'online',
@@ -64,7 +64,7 @@ app.use((err, req, res, next) => {
   console.error('[Unhandled Server Error]:', err);
   res.status(500).json({
     error: 'INTERNAL_SERVER_ERROR',
-    message: 'An unexpected internal error occurred on the PhishGuard server.'
+    message: 'An unexpected internal error occurred on the BharathShield server.'
   });
 });
 
@@ -88,7 +88,7 @@ async function startServer() {
 
   app.listen(PORT, () => {
     console.log(`=======================================================`);
-    console.log(`🛡️ PhishGuard API Backend Server running on port ${PORT}`);
+    console.log(`🛡️ BharathShield API Backend Server running on port ${PORT}`);
     console.log(`🌐 Health endpoint: http://localhost:${PORT}/api/health`);
     console.log(`=======================================================`);
   });

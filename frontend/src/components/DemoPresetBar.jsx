@@ -51,30 +51,30 @@ export default function DemoPresetBar({ onSelectPreset }) {
   ];
 
   return (
-    <div className="mb-6 p-4.5 rounded-2xl bg-slate-900/60 backdrop-blur-xl border border-cyan-500/25 shadow-xl shadow-cyan-500/5">
+    <div className="mb-6 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
       <div className="flex items-center gap-2 mb-3">
-        <div className="p-1 rounded bg-cyan-500/20 text-cyan-400">
-          <Zap className="w-4 h-4" />
+        <div className="p-1 rounded bg-teal-50 text-teal-700 border border-teal-200/80">
+          <Zap className="w-3.5 h-3.5" />
         </div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-300 font-mono">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
           {t('analyzer.presetsTitle')}
         </h3>
       </div>
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-wrap gap-2">
         {presets.map((p) => (
           <button
             key={p.id}
             onClick={() => onSelectPreset(p.sender, p.message)}
-            className={`text-xs font-medium px-3.5 py-2 rounded-xl border transition-all flex items-center gap-2 shadow-sm ${
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 shadow-xs ${
               p.type === 'phishing'
-                ? 'bg-rose-950/40 text-rose-200 border-rose-800/50 hover:bg-rose-900/60 hover:border-rose-400 hover:shadow-rose-900/30'
-                : 'bg-emerald-950/40 text-emerald-200 border-emerald-800/50 hover:bg-emerald-900/60 hover:border-emerald-400 hover:shadow-emerald-900/30'
+                ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200/80'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80'
             }`}
           >
             {p.type === 'phishing' ? (
-              <AlertOctagon className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              <AlertOctagon className="w-3.5 h-3.5 text-rose-600 shrink-0" />
             ) : (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             )}
             <span>{t(p.labelKey)}</span>
           </button>

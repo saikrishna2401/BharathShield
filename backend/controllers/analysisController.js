@@ -1,5 +1,5 @@
 /**
- * Analysis Controller for PhishGuard API
+ * Analysis Controller for BharathShield API
  */
 
 const { analyzeSMS } = require('../detection/phishingDetector');
@@ -50,7 +50,7 @@ async function handleAnalyze(req, res) {
 async function handleHealthCheck(req, res) {
   return res.status(200).json({
     status: 'ok',
-    service: 'PhishGuard Detection API',
+    service: 'BharathShield Detection API',
     version: '2.0.0-Enhanced',
     database: storageService.activeDatabaseMode,
     ml: 'unavailable (Rule-based fallback active)',
