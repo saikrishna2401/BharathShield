@@ -10,6 +10,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
 
 dotenv.config();
 
@@ -20,7 +22,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security Hardening Middlewares
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false // Allows inline scripts & dynamic styles for production SPA
+}));
 app.use(cors({
   origin: '*', // Allows development and mobile cross-origin access
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
@@ -48,16 +52,27 @@ app.use('/api', apiLimiter);
 // Mount API Routes
 app.use('/api', apiRoutes);
 
-// Root Route
-app.get('/', (req, res) => {
-  res.json({
-    app: 'BharathShield Backend Server',
-    tagline: 'Understand. Detect. Stay Safe.',
-    version: '2.0.0-Enhanced',
-    status: 'online',
-    documentation: '/api/health'
+// Serve Static Frontend Build in Production (Single-Service Cloud Deployment)
+const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
+if (fs.existsSync(frontendDistPath)) {
+  console.log(`[Production] Serving frontend static assets from: ${frontendDistPath}`);
+  app.use(express.static(frontendDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
-});
+} else {
+  // Root Route when running standalone backend
+  app.get('/', (req, res) => {
+    res.json({
+      app: 'BharathShield Backend Server',
+      tagline: 'Understand. Detect. Stay Safe.',
+      version: '2.0.0-Enhanced',
+      status: 'online',
+      documentation: '/api/health'
+    });
+  });
+}
 
 // Centralized Error Handling Middleware
 app.use((err, req, res, next) => {
