@@ -1,4 +1,4 @@
-# PhishGuard — Multilingual Phishing SMS Detection & Alert System
+# BharathShield — Multilingual Phishing SMS Detection & Alert System
 
 **Project ID:** AP-083  
 **Category:** Software (Cybersecurity + Regional Language Accessibility)  
