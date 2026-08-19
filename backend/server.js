@@ -21,10 +21,14 @@ const storageService = require('./services/storageService');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Security Hardening Middlewares
+// Security Hardening Middlewares - Relaxed COEP & CSP for static React SPA assets
 app.use(helmet({
-  contentSecurityPolicy: false // Allows inline scripts & dynamic styles for production SPA
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: false
 }));
+
 app.use(cors({
   origin: '*', // Allows development and mobile cross-origin access
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
@@ -56,9 +60,20 @@ app.use('/api', apiRoutes);
 const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
 if (fs.existsSync(frontendDistPath)) {
   console.log(`[Production] Serving frontend static assets from: ${frontendDistPath}`);
-  app.use(express.static(frontendDistPath));
+  
+  // Serve static files from dist directory
+  app.use(express.static(frontendDistPath, {
+    maxAge: '1d',
+    etag: true
+  }));
+
+  // Handle SPA routing: serve index.html for all non-API and non-static asset routes
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api')) return next();
+    // Prevent serving index.html for missing asset files (avoids Unexpected token '<' JS errors)
+    if (/\.(js|css|png|jpg|jpeg|gif|ico|svg|json|woff2?|ttf|eot)$/i.test(req.path)) {
+      return res.status(404).send('Asset not found');
+    }
     res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
 } else {
