@@ -1,23 +1,16 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertOctagon, X, CheckCircle } from 'lucide-react';
+import { X, AlertOctagon, Send, CheckCircle2 } from 'lucide-react';
 import { submitScamReport } from '../services/apiService';
 
-export default function ReportModal({ isOpen, onClose, initialData = null, onShowToast }) {
+export default function ReportModal({ isOpen, onClose, initialData, onShowToast, onSubmitCustom }) {
   const { t } = useTranslation();
-  const [categoryKey, setCategoryKey] = useState('BANK_FRAUD');
-  const [sender, setSender] = useState('');
-  const [message, setMessage] = useState('');
+  const [sender, setSender] = useState(initialData?.sender?.sender || '');
+  const [message, setMessage] = useState(initialData?.originalMessage || '');
+  const [categoryKey, setCategoryKey] = useState(initialData?.categoryKey || 'BANK_FRAUD');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-
-  React.useEffect(() => {
-    if (initialData) {
-      if (initialData.sender && initialData.sender.sender) setSender(initialData.sender.sender);
-      if (initialData.categoryKey) setCategoryKey(initialData.categoryKey);
-    }
-  }, [initialData]);
+  const [submitted, setSubmitted] = useState(false);
 
   if (!isOpen) return null;
 
@@ -26,147 +19,130 @@ export default function ReportModal({ isOpen, onClose, initialData = null, onSho
     if (!message.trim()) return;
 
     setIsSubmitting(true);
-    await submitScamReport({
+    const payload = {
       categoryKey,
       sender,
       message,
       description
-    });
-    setIsSubmitting(false);
-    setIsSuccess(true);
+    };
 
-    if (onShowToast) onShowToast('Scam threat report submitted to community database!', 'success');
+    if (onSubmitCustom) {
+      await onSubmitCustom(payload);
+    } else {
+      await submitScamReport(payload);
+      if (onShowToast) onShowToast(t('report.successMsg'), 'success');
+    }
+
+    setIsSubmitting(false);
+    setSubmitted(true);
 
     setTimeout(() => {
-      setIsSuccess(false);
       onClose();
+      setSubmitted(false);
     }, 2000);
   };
 
-  const categories = [
-    'BANK_FRAUD',
-    'UPI_SCAM',
-    'OTP_SCAM',
-    'KYC_SCAM',
-    'LOTTERY_SCAM',
-    'JOB_SCAM',
-    'DELIVERY_SCAM',
-    'GOVT_IMPERSONATION',
-    'UNKNOWN'
-  ];
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
-      <div className="bg-white border border-slate-200/90 rounded-2xl w-full max-w-lg p-6 lg:p-8 relative shadow-xl">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 p-1.5 rounded-xl bg-slate-100 border border-slate-200 transition-all"
-        >
-          <X className="w-4 h-4" />
-        </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-6 lg:p-8 relative shadow-xl space-y-5">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-200">
+              <AlertOctagon className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 font-display">
+                {t('report.title')}
+              </h3>
+              <p className="text-xs text-slate-500 font-medium">
+                {t('report.subtitle')}
+              </p>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-3.5 mb-5 border-b border-slate-100 pb-4">
-          <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 shadow-xs">
-            <AlertOctagon className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 font-display">
-              {t('report.title')}
-            </h3>
-            <p className="text-xs text-slate-500 font-medium">
-              {t('report.subtitle')}
-            </p>
-          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl bg-slate-100 border border-slate-200 transition-all"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        {isSuccess ? (
+        {submitted ? (
           <div className="p-8 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200 shadow-xs">
-              <CheckCircle className="w-7 h-7" />
-            </div>
-            <h4 className="text-base font-bold text-emerald-800">
-              {t('report.successMsg')}
-            </h4>
-            <p className="text-xs text-slate-500 font-medium">
-              {t('report.reportRecorded')}
-            </p>
+            <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+            <h4 className="text-base font-bold text-slate-900 font-display">{t('report.successMsg')}</h4>
+            <p className="text-xs text-slate-500 font-medium">{t('report.reportRecorded')}</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5 font-mono">
+              <label className="block text-xs font-bold uppercase text-slate-600 mb-1.5 font-mono">
                 {t('report.categoryLabel')}
               </label>
               <select
                 value={categoryKey}
                 onChange={(e) => setCategoryKey(e.target.value)}
-                className="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/15 font-sans"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-teal-500"
               >
-                {categories.map((catKey) => (
-                  <option key={catKey} value={catKey} className="bg-white">
-                    {t(`categories.${catKey}`)}
-                  </option>
-                ))}
+                <option value="BANK_FRAUD">{t('categories.BANK_FRAUD')}</option>
+                <option value="KYC_SCAM">{t('categories.KYC_SCAM')}</option>
+                <option value="OTP_SCAM">{t('categories.OTP_SCAM')}</option>
+                <option value="UPI_SCAM">{t('categories.UPI_SCAM')}</option>
+                <option value="LOTTERY_SCAM">{t('categories.LOTTERY_SCAM')}</option>
+                <option value="GOVT_IMPERSONATION">{t('categories.GOVT_IMPERSONATION')}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5 font-mono">
+              <label className="block text-xs font-bold uppercase text-slate-600 mb-1.5 font-mono">
                 {t('report.senderLabel')}
               </label>
               <input
                 type="text"
                 value={sender}
                 onChange={(e) => setSender(e.target.value)}
-                placeholder={t('analyzer.senderPlaceholder')}
-                className="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/15 font-mono"
+                placeholder="e.g. VK-SBIINB"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 font-mono focus:outline-none focus:border-teal-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5 font-mono">
+              <label className="block text-xs font-bold uppercase text-slate-600 mb-1.5 font-mono">
                 {t('report.messageLabel')} <span className="text-rose-500">*</span>
               </label>
               <textarea
                 rows={3}
+                required
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={t('analyzer.messagePlaceholder')}
-                required
-                className="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-xl p-3.5 text-xs text-slate-800 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/15 resize-none leading-relaxed"
+                placeholder="Paste scam message content..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm text-slate-900 font-mono resize-none focus:outline-none focus:border-teal-500"
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5 font-mono">
-                {t('report.descLabel')}
-              </label>
-              <textarea
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-slate-50/70 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-800 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/15 resize-none"
-              />
-            </div>
-
-            <div className="pt-2 flex justify-end gap-3">
+            <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-200">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-xs transition-all"
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold"
               >
                 {t('report.cancelBtn')}
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !message.trim()}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs flex items-center gap-2 disabled:opacity-50 transition-all"
+                disabled={isSubmitting}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/20 flex items-center gap-1.5"
               >
-                {isSubmitting ? t('report.submittingBtn') : t('report.submitBtn')}
+                <Send className="w-3.5 h-3.5" />
+                <span>{isSubmitting ? t('report.submittingBtn') : t('report.submitBtn')}</span>
               </button>
             </div>
           </form>
         )}
+
       </div>
     </div>
   );

@@ -1,114 +1,102 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Settings, Trash2, Globe, Lock, EyeOff } from 'lucide-react';
+import { Settings, Globe, Shield, Trash2, Lock } from 'lucide-react';
 import { clearHistory } from '../services/apiService';
 
 export default function SettingsView({ currentLang, onLanguageChange, onShowToast }) {
   const { t } = useTranslation();
-  const [saveHistory, setSaveHistory] = useState(true);
 
   const handleClearData = async () => {
     if (window.confirm(t('settings.deleteConfirm'))) {
-      await clearHistory();
       localStorage.clear();
-      if (onShowToast) onShowToast(t('settings.deleteSuccess'), 'warning');
-    }
-  };
-
-  const handleToggleHistory = (e) => {
-    setSaveHistory(e.target.checked);
-    if (onShowToast) {
-      onShowToast(e.target.checked ? 'History logging enabled' : 'Incognito scanning mode enabled (No local history saved)', 'info');
+      await clearHistory('user-101');
+      if (onShowToast) onShowToast(t('settings.deleteSuccess'), 'info');
+      setTimeout(() => window.location.reload(), 1000);
     }
   };
 
   return (
-    <div className="w-full max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
+      
+      {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-slate-900 font-display flex items-center gap-2.5">
-          <Settings className="w-5 h-5 text-teal-600" />
+        <h2 className="text-2xl font-bold text-slate-900 font-display flex items-center gap-2.5">
+          <Settings className="w-6 h-6 text-teal-600" />
           <span>{t('settings.title')}</span>
         </h2>
-        <p className="text-xs text-slate-500 mt-0.5 font-medium">
+        <p className="text-xs text-slate-500 mt-1 font-medium">
           {t('settings.subtitle')}
         </p>
       </div>
 
-      <div className="bg-white p-6 lg:p-8 rounded-2xl border border-slate-200/90 shadow-xs space-y-6">
+      {/* Settings Grid */}
+      <div className="space-y-4">
 
         {/* Language Selection */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-5">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 font-display">
-              <Globe className="w-4 h-4 text-teal-600" />
-              <span>{t('settings.langTitle')}</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-1 font-medium">
-              {t('settings.langDesc')}
-            </p>
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-2xl bg-teal-50 text-teal-600 border border-teal-200">
+              <Globe className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 font-display">
+                {t('settings.langTitle')}
+              </h4>
+              <p className="text-xs text-slate-500 font-medium">
+                {t('settings.langDesc')}
+              </p>
+            </div>
           </div>
+
           <select
             value={currentLang}
             onChange={(e) => onLanguageChange(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-xs text-slate-800 font-semibold rounded-xl px-4 py-2.5 focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-500/15 cursor-pointer"
+            className="bg-slate-100 border border-slate-200 text-slate-900 rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none"
           >
             <option value="en">English</option>
-            <option value="te">తెలుగు (Telugu)</option>
-            <option value="hi">हिन्दी (Hindi)</option>
-            <option value="ta">தமிழ் (Tamil)</option>
+            <option value="te">Telugu (తెలుగు)</option>
+            <option value="hi">Hindi (हिन्दी)</option>
+            <option value="ta">Tamil (தமிழ்)</option>
           </select>
         </div>
 
-        {/* Save History Toggle */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-5">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 font-display">
-              <EyeOff className="w-4 h-4 text-teal-600" />
-              <span>{t('settings.historyTitle')}</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-1 font-medium">
-              {t('settings.historyDesc')}
-            </p>
+        {/* Data Delete */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 font-display">
+                {t('settings.deleteTitle')}
+              </h4>
+              <p className="text-xs text-slate-500 font-medium">
+                {t('settings.deleteDesc')}
+              </p>
+            </div>
           </div>
-          <input
-            type="checkbox"
-            checked={saveHistory}
-            onChange={handleToggleHistory}
-            className="w-5 h-5 accent-teal-600 rounded cursor-pointer"
-          />
-        </div>
 
-        {/* Data Wiping */}
-        <div className="flex items-center justify-between pt-2">
-          <div>
-            <h3 className="text-sm font-bold text-rose-900 flex items-center gap-2 font-display">
-              <Trash2 className="w-4 h-4 text-rose-600" />
-              <span>{t('settings.deleteTitle')}</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-1 font-medium">
-              {t('settings.deleteDesc')}
-            </p>
-          </div>
           <button
             onClick={handleClearData}
-            className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all shadow-xs"
+            className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all shadow-2xs"
           >
             {t('settings.deleteBtn')}
           </button>
         </div>
 
+        {/* Privacy Notice Card */}
+        <div className="bg-teal-50 border border-teal-200 rounded-3xl p-6 shadow-xs space-y-2">
+          <div className="flex items-center gap-2 text-teal-800 font-bold text-xs uppercase tracking-wider font-mono">
+            <Lock className="w-4 h-4" />
+            <span>{t('settings.privacyGuarantee')}</span>
+          </div>
+          <p className="text-xs text-teal-900 leading-relaxed font-medium">
+            {t('settings.privacyNotice')}
+          </p>
+        </div>
+
       </div>
 
-      {/* Privacy Notice Card */}
-      <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs text-slate-600 space-y-2 shadow-xs">
-        <h4 className="font-bold text-slate-900 flex items-center gap-2 font-display text-sm">
-          <Lock className="w-4 h-4 text-emerald-600" />
-          <span>{t('settings.privacyGuarantee')}</span>
-        </h4>
-        <p className="leading-relaxed font-medium">
-          {t('settings.privacyNotice')}
-        </p>
-      </div>
     </div>
   );
 }

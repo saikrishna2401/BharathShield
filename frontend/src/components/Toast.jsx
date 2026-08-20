@@ -1,40 +1,43 @@
 import React from 'react';
-import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Info, XCircle, X } from 'lucide-react';
 
 export default function Toast({ toast, onClose }) {
   if (!toast) return null;
 
   const { message, type = 'info' } = toast;
 
-  const typeStyles = {
-    success: 'bg-emerald-50 text-emerald-900 border-emerald-200 shadow-xs',
-    warning: 'bg-amber-50 text-amber-900 border-amber-200 shadow-xs',
-    error: 'bg-rose-50 text-rose-900 border-rose-200 shadow-xs',
-    info: 'bg-white text-slate-900 border-slate-200 shadow-md'
+  const typeConfig = {
+    success: {
+      bgColor: 'bg-emerald-50 text-emerald-900 border-emerald-300',
+      icon: <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+    },
+    error: {
+      bgColor: 'bg-rose-50 text-rose-900 border-rose-300',
+      icon: <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+    },
+    warning: {
+      bgColor: 'bg-amber-50 text-amber-900 border-amber-300',
+      icon: <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+    },
+    info: {
+      bgColor: 'bg-slate-900 text-white border-slate-700',
+      icon: <Info className="w-4 h-4 text-teal-400 shrink-0" />
+    }
   };
 
-  const Icon = {
-    success: CheckCircle2,
-    warning: AlertTriangle,
-    error: AlertTriangle,
-    info: Info
-  }[type] || Info;
-
-  const iconColors = {
-    success: 'text-emerald-600',
-    warning: 'text-amber-600',
-    error: 'text-rose-600',
-    info: 'text-teal-600'
-  }[type] || 'text-teal-600';
+  const config = typeConfig[type] || typeConfig.info;
 
   return (
     <div className="fixed bottom-6 right-6 z-50 animate-fade-in max-w-sm">
-      <div className={`px-4 py-3 border rounded-xl flex items-center gap-3 shadow-lg ${typeStyles[type]}`}>
-        <Icon className={`w-5 h-5 shrink-0 ${iconColors}`} />
-        <span className="text-xs font-semibold font-sans leading-tight">{message}</span>
+      <div className={`p-4 rounded-2xl border shadow-lg flex items-center justify-between gap-3 text-xs font-semibold font-display ${config.bgColor}`}>
+        <div className="flex items-center gap-2.5">
+          {config.icon}
+          <span>{message}</span>
+        </div>
+
         <button
           onClick={onClose}
-          className="ml-auto text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+          className="p-1 rounded-lg hover:opacity-75 transition-opacity"
         >
           <X className="w-3.5 h-3.5" />
         </button>

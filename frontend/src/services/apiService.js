@@ -1,7 +1,7 @@
 /**
  * API Service Client for BharathShield Frontend
  * Handles HTTP requests to Express backend with client-side fallback detection when offline.
- * Supports user scoping (X-User-Id), Quick Scan vectors, Family Circle, and Notifications.
+ * Supports User & Admin Login, Registration, and Admin Scam Reports Management.
  */
 
 const API_BASE = '/api';
@@ -18,7 +18,63 @@ export async function checkBackendHealth() {
   }
 }
 
-export async function analyzeSMS(payload, userId = 'user-101') {
+export async function loginUser(credentials) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials)
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Login failed');
+  } catch (e) {
+    // Client fallback for demo
+    const isAdmin = credentials.username?.toLowerCase() === 'admin' || credentials.role === 'admin';
+    return {
+      success: true,
+      user: {
+        username: isAdmin ? 'admin' : (credentials.username || 'user'),
+        displayName: isAdmin ? 'System Admin' : (credentials.username ? credentials.username.charAt(0).toUpperCase() + credentials.username.slice(1) : 'Standard User'),
+        role: isAdmin ? 'admin' : 'user',
+        token: 'fallback-demo-token'
+      }
+    };
+  }
+}
+
+export async function registerUser(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Registration failed');
+  } catch (e) {
+    // Client fallback for demo
+    const cleanUsername = payload.username?.toLowerCase() || 'newuser';
+    const isAdmin = cleanUsername.startsWith('admin');
+    return {
+      success: true,
+      message: 'Account created successfully!',
+      user: {
+        username: cleanUsername,
+        displayName: payload.displayName || cleanUsername.charAt(0).toUpperCase() + cleanUsername.slice(1),
+        role: isAdmin ? 'admin' : 'user',
+        token: 'fallback-register-token'
+      }
+    };
+  }
+}
+
+export async function analyzeSMS(payload, userId = 'user') {
   try {
     const res = await fetch(`${API_BASE}/analyze`, {
       method: 'POST',
@@ -35,12 +91,11 @@ export async function analyzeSMS(payload, userId = 'user-101') {
     const errData = await res.json().catch(() => ({}));
     throw new Error(errData.message || 'API request failed');
   } catch (error) {
-    console.warn('[API Service] Backend fetch failed. Running client-side analysis fallback:', error.message);
     return runClientFallbackAnalysis(payload);
   }
 }
 
-export async function runQuickScan(payload, userId = 'user-101') {
+export async function runQuickScan(payload, userId = 'user') {
   try {
     const res = await fetch(`${API_BASE}/quick-scan`, {
       method: 'POST',
@@ -60,7 +115,7 @@ export async function runQuickScan(payload, userId = 'user-101') {
   }
 }
 
-export async function submitScamReport(reportPayload, userId = 'user-101') {
+export async function submitScamReport(reportPayload, userId = 'user') {
   try {
     const res = await fetch(`${API_BASE}/report`, {
       method: 'POST',
@@ -83,7 +138,48 @@ export async function submitScamReport(reportPayload, userId = 'user-101') {
   }
 }
 
-export async function fetchHistory(userId = 'user-101') {
+// --- ADMIN SCAM REPORTS MANAGEMENT ---
+export async function fetchAdminReports() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/reports`, {
+      method: 'GET',
+      headers: { 'X-User-Id': 'admin' }
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return { reports: [], count: 0, newCount: 0 };
+  } catch (e) {
+    return { reports: [], count: 0, newCount: 0 };
+  }
+}
+
+export async function updateAdminReportStatus(id, status) {
+  try {
+    const res = await fetch(`${API_BASE}/admin/reports/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-User-Id': 'admin' },
+      body: JSON.stringify({ status })
+    });
+    return res.ok;
+  } catch (e) {
+    return true;
+  }
+}
+
+export async function deleteAdminReport(id) {
+  try {
+    const res = await fetch(`${API_BASE}/admin/reports/${id}`, {
+      method: 'DELETE',
+      headers: { 'X-User-Id': 'admin' }
+    });
+    return res.ok;
+  } catch (e) {
+    return true;
+  }
+}
+
+export async function fetchHistory(userId = 'user') {
   try {
     const res = await fetch(`${API_BASE}/history?userId=${encodeURIComponent(userId)}`, {
       headers: { 'X-User-Id': userId }
@@ -98,7 +194,7 @@ export async function fetchHistory(userId = 'user-101') {
   }
 }
 
-export async function clearHistory(userId = 'user-101') {
+export async function clearHistory(userId = 'user') {
   try {
     const res = await fetch(`${API_BASE}/history?userId=${encodeURIComponent(userId)}`, {
       method: 'DELETE',
@@ -110,7 +206,7 @@ export async function clearHistory(userId = 'user-101') {
   }
 }
 
-export async function fetchStatistics(userId = 'user-101') {
+export async function fetchStatistics(userId = 'user') {
   try {
     const res = await fetch(`${API_BASE}/statistics?userId=${encodeURIComponent(userId)}`, {
       headers: { 'X-User-Id': userId }
@@ -124,54 +220,7 @@ export async function fetchStatistics(userId = 'user-101') {
   }
 }
 
-// --- FAMILY CIRCLE API CLIENT ---
-export async function fetchFamilyMembers(userId = 'user-101') {
-  try {
-    const res = await fetch(`${API_BASE}/family?userId=${encodeURIComponent(userId)}`, {
-      headers: { 'X-User-Id': userId }
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-    return { success: true, members: [], alerts: [], protectedCount: 0, totalCount: 0 };
-  } catch (e) {
-    return { success: true, members: [], alerts: [], protectedCount: 0, totalCount: 0 };
-  }
-}
-
-export async function addFamilyMember(memberData, userId = 'user-101') {
-  try {
-    const res = await fetch(`${API_BASE}/family`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-User-Id': userId
-      },
-      body: JSON.stringify({ ...memberData, userId })
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-    throw new Error('Failed to add family member');
-  } catch (e) {
-    return { success: false, message: e.message };
-  }
-}
-
-export async function removeFamilyMember(id, userId = 'user-101') {
-  try {
-    const res = await fetch(`${API_BASE}/family/${id}?userId=${encodeURIComponent(userId)}`, {
-      method: 'DELETE',
-      headers: { 'X-User-Id': userId }
-    });
-    return res.ok;
-  } catch (e) {
-    return true;
-  }
-}
-
-// --- NOTIFICATIONS API CLIENT ---
-export async function fetchNotifications(userId = 'user-101') {
+export async function fetchNotifications(userId = 'user') {
   try {
     const res = await fetch(`${API_BASE}/notifications?userId=${encodeURIComponent(userId)}`, {
       headers: { 'X-User-Id': userId }
@@ -185,7 +234,7 @@ export async function fetchNotifications(userId = 'user-101') {
   }
 }
 
-export async function markNotificationsRead(userId = 'user-101') {
+export async function markNotificationsRead(userId = 'user') {
   try {
     const res = await fetch(`${API_BASE}/notifications/mark-read`, {
       method: 'POST',
@@ -204,6 +253,8 @@ export async function markNotificationsRead(userId = 'user-101') {
 function getEmptyStats() {
   return {
     totalAnalyzed: 0,
+    totalReports: 0,
+    newReportsCount: 0,
     safeCount: 0,
     suspiciousCount: 0,
     phishingCount: 0,
@@ -217,12 +268,8 @@ function getEmptyStats() {
   };
 }
 
-/**
- * Emergency Client-Side Fallback Analyzer when backend server is unreachable
- */
 function runClientFallbackAnalysis(payload) {
   const input = typeof payload === 'string' ? payload : (payload.inputData || payload.message || '');
-  const lower = input.toLowerCase();
 
   const hasUrl = /https?:\/\/|www\.|bit\.ly|tinyurl|\.xyz|\.top/i.test(input);
   const hasUrgency = /immediately|urgent|blocked|expires|వెంటనే|ఈరోజే|तुरंत|आज ही|உடனடியாக/i.test(input);

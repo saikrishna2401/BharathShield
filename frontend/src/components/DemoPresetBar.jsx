@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Zap, AlertOctagon, CheckCircle2 } from 'lucide-react';
+import { Sparkles, MessageSquare } from 'lucide-react';
 
 export default function DemoPresetBar({ onSelectPreset }) {
   const { t } = useTranslation();
@@ -9,73 +9,59 @@ export default function DemoPresetBar({ onSelectPreset }) {
     {
       id: 'enPhish',
       labelKey: 'presets.enPhish',
-      sender: '9876543210',
-      type: 'phishing',
-      message: 'Congratulations! You won ₹25,00,000. Click this link immediately to claim your prize: http://sbi-kyc-verification.example.xyz'
+      sender: 'VK-SBIINB',
+      message: 'Dear customer, your SBI netbanking account has been suspended due to pending KYC. Click http://sbi-kyc-update.xyz to update immediately.'
     },
     {
       id: 'tePhish',
       labelKey: 'presets.tePhish',
-      sender: '9123456789',
-      type: 'phishing',
-      message: 'మీ బ్యాంక్ ఖాతా ఈరోజు బ్లాక్ అవుతుంది. బహుమతి పొందడానికి మరియు KYC పూర్తి చేయడానికి వెంటనే ఈ లింక్పై క్లిక్ చేయండి: http://secure-bank-login.top'
+      sender: 'AX-BANKIN',
+      message: 'గమనిక: మీ బ్యాంక్ ఖాతా ఈరోజే నిలిపివేయబడుతుంది. వెంటనే రద్దు కాకుండా ఉండేందుకు ఈ లింక్పై క్లిక్ చేయండి: http://bit.ly/bank-kyc-te'
     },
     {
       id: 'hiPhish',
       labelKey: 'presets.hiPhish',
-      sender: '9988776655',
-      type: 'phishing',
-      message: 'बधाई हो! आपने ₹10,00,000 जीते हैं। अपना इनाम पाने के लिए तुरंत इस लिंक पर क्लिक करें और केवाईसी अपडेट करें: http://gift-reward-claim.xyz'
+      sender: 'BZ-PRIZE',
+      message: 'बधाई हो! आपने ₹25,00,000 की लॉटरी जीती है। इनाम राशि प्राप्त करने के लिए तुरंत इस लिंक पर क्लिक करें: http://lottery-claim.top'
     },
     {
       id: 'taPhish',
       labelKey: 'presets.taPhish',
-      sender: '9444012345',
-      type: 'phishing',
-      message: 'வாழ்த்துகள்! நீங்கள் ₹10,00,000 வென்றுள்ளீர்கள். பரிசைப் பெற உடனடியாக இந்த இணைப்பைக் கிளிக் செய்து விவரங்களை புதுப்பிக்கவும்: http://bank-kyc-update.site'
+      sender: 'TN-GOVT',
+      message: 'எச்சரிக்கை: உங்கள் வங்கி கணக்கு முடக்கப்படும். உடனடியாக புதுப்பிக்க இந்த லிங்கை கிளிக் செய்யவும்: http://tn-bank-update.xyz'
     },
     {
       id: 'mixedPhish',
       labelKey: 'presets.mixedPhish',
-      sender: '9811223344',
-      type: 'phishing',
-      message: 'మీ account block అవుతుంది. Click this link immediately to verify KYC: http://bit.ly/fake-bank'
+      sender: '9876543210',
+      message: 'మీ ఖాతా Block కాకుండా ఉండటానికి Urgent గా OTP మరియు Aadhaar వివరాలు ఈ క్రింది లింక్ లో ఇవ్వండి: http://192.168.1.1/update'
     },
     {
       id: 'safeOtp',
       labelKey: 'presets.safeOtp',
-      sender: 'VK-SBIINB',
-      type: 'safe',
-      message: 'Your OTP for login is 483921. Do not share this OTP with anyone for security purposes.'
+      sender: 'VM-HDFCBK',
+      message: '849201 is your secret OTP for transaction of Rs. 2,500 at Amazon. Do NOT share OTP with anyone. HDFC Bank will never call to ask for OTP.'
     }
   ];
 
   return (
-    <div className="mb-6 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="p-1 rounded bg-teal-50 text-teal-700 border border-teal-200/80">
-          <Zap className="w-3.5 h-3.5" />
-        </div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
+    <div className="bg-white border border-slate-200 rounded-3xl p-4 lg:p-5 shadow-xs space-y-3">
+      <div className="flex items-center gap-2">
+        <Sparkles className="w-4 h-4 text-teal-600" />
+        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">
           {t('analyzer.presetsTitle')}
-        </h3>
+        </h4>
       </div>
+
       <div className="flex flex-wrap gap-2">
         {presets.map((p) => (
           <button
             key={p.id}
-            onClick={() => onSelectPreset(p.sender, p.message)}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 shadow-xs ${
-              p.type === 'phishing'
-                ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200/80'
-                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200/80'
-            }`}
+            type="button"
+            onClick={() => onSelectPreset(p.message, p.sender)}
+            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-800 border border-slate-200 hover:border-teal-300 text-xs font-medium transition-all flex items-center gap-1.5 shadow-2xs"
           >
-            {p.type === 'phishing' ? (
-              <AlertOctagon className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-            ) : (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            )}
+            <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
             <span>{t(p.labelKey)}</span>
           </button>
         ))}

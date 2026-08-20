@@ -6,38 +6,40 @@ const express = require('express');
 const router = express.Router();
 
 const { handleAnalyze, handleHealthCheck } = require('../controllers/analysisController');
-const { handleReport } = require('../controllers/reportController');
+const { handleReport, handleGetAllReports, handleUpdateReportStatus, handleDeleteReport } = require('../controllers/reportController');
 const {
   handleGetHistory,
   handleDeleteHistoryItem,
   handleClearHistory,
   handleGetStatistics
 } = require('../controllers/historyController');
-const { handleGetFamily, handleAddFamily, handleRemoveFamily } = require('../controllers/familyController');
 const { handleGetNotifications, handleMarkNotificationsRead } = require('../controllers/notificationController');
 const { handleQuickScan } = require('../controllers/quickScanController');
+const { handleLogin, handleRegister } = require('../controllers/authController');
 
 // Health Check
 router.get('/health', handleHealthCheck);
 
-// SMS Analysis
-router.post('/analyze', handleAnalyze);
+// Authentication (User & Admin Login & Registration)
+router.post('/auth/login', handleLogin);
+router.post('/auth/register', handleRegister);
 
-// Quick Scan (6 Vectors)
+// SMS Analysis & Quick Vector Scan
+router.post('/analyze', handleAnalyze);
 router.post('/quick-scan', handleQuickScan);
 
-// Scam Reporting
+// Scam Reporting (User submits)
 router.post('/report', handleReport);
+
+// Admin Report Management (Admin receives & manages reports)
+router.get('/admin/reports', handleGetAllReports);
+router.put('/admin/reports/:id', handleUpdateReportStatus);
+router.delete('/admin/reports/:id', handleDeleteReport);
 
 // History Management
 router.get('/history', handleGetHistory);
 router.delete('/history/:id', handleDeleteHistoryItem);
 router.delete('/history', handleClearHistory);
-
-// Family Circle
-router.get('/family', handleGetFamily);
-router.post('/family', handleAddFamily);
-router.delete('/family/:id', handleRemoveFamily);
 
 // Notifications / Alerts Center
 router.get('/notifications', handleGetNotifications);

@@ -8,26 +8,56 @@ import DashboardView from './components/DashboardView';
 import QuickScanView from './components/QuickScanView';
 import SMSAnalyzer from './components/SMSAnalyzer';
 import DetectionResultCard from './components/DetectionResultCard';
-import FamilyCircleView from './components/FamilyCircleView';
 import HistoryView from './components/HistoryView';
 import StaySafeView from './components/StaySafeView';
 import HowItWorksView from './components/HowItWorksView';
 import ReportModal from './components/ReportModal';
 import SettingsView from './components/SettingsView';
 import Toast from './components/Toast';
-import ProtectionOnboardingModal from './components/ProtectionOnboardingModal';
 import NotificationModal from './components/NotificationModal';
+import LoginModal from './components/LoginModal';
+import AdminReportsView from './components/AdminReportsView';
 
-import { checkBackendHealth, analyzeSMS, fetchNotifications } from './services/apiService';
+import { checkBackendHealth, analyzeSMS, fetchNotifications, submitScamReport } from './services/apiService';
+
+const USER_STORAGE_KEY = 'bharathshield_current_user';
+const TAB_STORAGE_KEY = 'bharathshield_active_tab';
 
 export default function App() {
   const { i18n } = useTranslation();
   const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'quickScan' | 'analyze' | 'history' | 'family' | 'learn' | 'settings'
 
-  // User Profile Identity (Strict Data Isolation)
-  const [currentUserId, setCurrentUserId] = useState('user-101');
-  const [userName, setUserName] = useState('Sai Krishna');
+  // Restore session from localStorage across page reloads
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+      if (savedUser) return JSON.parse(savedUser);
+    } catch (e) {
+      console.warn('Failed to parse saved user session');
+    }
+    return {
+      username: 'user',
+      displayName: 'Standard User',
+      role: 'user',
+      token: 'token-user-session-1122'
+    };
+  });
+
+  // Restore active tab from localStorage
+  const [activeTab, setActiveTabState] = useState(() => {
+    try {
+      const savedTab = localStorage.getItem(TAB_STORAGE_KEY);
+      if (savedTab) return savedTab;
+    } catch (e) {}
+    return 'dashboard';
+  });
+
+  const setActiveTab = (tabId) => {
+    setActiveTabState(tabId);
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, tabId);
+    } catch (e) {}
+  };
 
   // System & Telemetry State
   const [healthStatus, setHealthStatus] = useState({ status: 'checking', database: 'local_file', ml: 'unavailable' });
@@ -35,7 +65,7 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   // UI Modals State
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
@@ -46,16 +76,11 @@ export default function App() {
 
   useEffect(() => {
     checkBackendHealth().then(setHealthStatus);
-
-    // Check onboarding preference
-    const onboarded = localStorage.getItem('bharathshield_onboarded');
-    if (!onboarded) {
-      setIsOnboardingOpen(true);
-    }
   }, []);
 
   const loadNotificationsData = async () => {
-    const notifData = await fetchNotifications(currentUserId);
+    const currentId = currentUser ? currentUser.username : 'user';
+    const notifData = await fetchNotifications(currentId);
     if (notifData && notifData.notifications) {
       setNotifications(notifData.notifications);
       setUnreadCount(notifData.unreadCount || 0);
@@ -64,7 +89,7 @@ export default function App() {
 
   useEffect(() => {
     loadNotificationsData();
-  }, [currentUserId]);
+  }, [currentUser]);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -80,27 +105,49 @@ export default function App() {
     showToast(`Language switched to ${langNames[newLang] || newLang}`, 'success');
   };
 
-  const handleSwitchUser = () => {
-    if (currentUserId === 'user-101') {
-      setCurrentUserId('user-202');
-      setUserName('Priya Sharma');
-      showToast('Switched account to Priya Sharma (User B) — Data Isolated', 'info');
-    } else {
-      setCurrentUserId('user-101');
-      setUserName('Sai Krishna');
-      showToast('Switched account to Sai Krishna (User A) — Data Isolated', 'info');
-    }
+  const handleLoginSuccess = (userData) => {
+    setCurrentUser(userData);
+    try {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+    } catch (e) {}
+
     setAnalysisResult(null);
+    showToast(`Logged in successfully as ${userData.displayName} (${userData.role.toUpperCase()})`, 'success');
+
+    if (userData.role === 'admin') {
+      setActiveTab('adminReports');
+    } else {
+      setActiveTab('dashboard');
+    }
+  };
+
+  const handleLogout = () => {
+    const defaultUser = {
+      username: 'user',
+      displayName: 'Standard User',
+      role: 'user',
+      token: 'token-user-session-1122'
+    };
+    setCurrentUser(defaultUser);
+    try {
+      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.setItem(TAB_STORAGE_KEY, 'dashboard');
+    } catch (e) {}
+
+    setActiveTabState('dashboard');
+    showToast('Logged out of session', 'info');
+    setIsLoginOpen(true);
   };
 
   const handleAnalyze = async (payload) => {
     setIsLoading(true);
     setAnalysisResult(null);
 
+    const currentId = currentUser ? currentUser.username : 'user';
     const res = await analyzeSMS({
       ...payload,
       language: currentLang
-    }, currentUserId);
+    }, currentId);
 
     setAnalysisResult(res);
     setIsLoading(false);
@@ -120,27 +167,25 @@ export default function App() {
     }, 100);
   };
 
-  const handleOnboardingSelect = (option) => {
-    localStorage.setItem('bharathshield_onboarded', 'true');
-    if (option === 'family') {
-      setActiveTab('family');
-      showToast('Family Circle protection active!', 'success');
-    } else {
-      showToast('Personal scam protection active!', 'info');
-    }
+  const handleUserReportSubmit = async (reportPayload) => {
+    const currentId = currentUser ? currentUser.username : 'user';
+    await submitScamReport(reportPayload, currentId);
+    showToast('Spam report submitted! Admin notified.', 'success');
+    loadNotificationsData();
   };
 
   return (
-    <div className={`min-h-screen bg-[#080c14] text-slate-100 flex flex-col lang-${currentLang} selection:bg-teal-500 selection:text-slate-950`}>
+    <div className={`min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col lang-${currentLang} selection:bg-teal-600 selection:text-white`}>
       
       {/* Header Bar */}
       <Header
         currentLang={currentLang}
         onLanguageChange={handleLanguageChange}
-        userName={userName}
         unreadCount={unreadCount}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
-        onSwitchUser={handleSwitchUser}
+        currentUser={currentUser}
+        onOpenLogin={() => setIsLoginOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Layout */}
@@ -151,6 +196,7 @@ export default function App() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           unreadCount={unreadCount}
+          currentUser={currentUser}
         />
 
         {/* Dynamic View Area */}
@@ -159,8 +205,7 @@ export default function App() {
           {/* VIEW: Dashboard (Home) */}
           {activeTab === 'dashboard' && (
             <DashboardView
-              currentUserId={currentUserId}
-              userName={userName}
+              currentUserId={currentUser ? currentUser.username : 'user'}
               onNavigate={setActiveTab}
               onShowToast={showToast}
             />
@@ -169,7 +214,7 @@ export default function App() {
           {/* VIEW: Quick Scan */}
           {activeTab === 'quickScan' && (
             <QuickScanView
-              currentUserId={currentUserId}
+              currentUserId={currentUser ? currentUser.username : 'user'}
               onShowToast={showToast}
               onOpenReport={(res) => setIsReportModalOpen(true)}
             />
@@ -196,21 +241,17 @@ export default function App() {
             </div>
           )}
 
-          {/* VIEW: Family Circle */}
-          {activeTab === 'family' && (
-            <FamilyCircleView
-              currentUserId={currentUserId}
-              onShowToast={showToast}
-              onOpenQuickScan={() => setActiveTab('quickScan')}
-            />
-          )}
-
           {/* VIEW: Alerts & History */}
           {activeTab === 'history' && (
             <HistoryView
-              currentUserId={currentUserId}
+              currentUserId={currentUser ? currentUser.username : 'user'}
               onShowToast={showToast}
             />
+          )}
+
+          {/* VIEW: Admin Reports Management (Available to Admin) */}
+          {activeTab === 'adminReports' && (
+            <AdminReportsView onShowToast={showToast} />
           )}
 
           {/* VIEW: Stay Safe Guidelines */}
@@ -233,14 +274,12 @@ export default function App() {
         </main>
       </div>
 
-      {/* Onboarding Modal */}
-      {isOnboardingOpen && (
-        <ProtectionOnboardingModal
-          isOpen={isOnboardingOpen}
-          onClose={() => setIsOnboardingOpen(false)}
-          onSelectOption={handleOnboardingSelect}
-        />
-      )}
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
 
       {/* Notification Center Modal */}
       {isNotificationsOpen && (
@@ -249,7 +288,7 @@ export default function App() {
           onClose={() => setIsNotificationsOpen(false)}
           notifications={notifications}
           unreadCount={unreadCount}
-          currentUserId={currentUserId}
+          currentUserId={currentUser ? currentUser.username : 'user'}
           onRefresh={loadNotificationsData}
         />
       )}
@@ -261,6 +300,7 @@ export default function App() {
           onClose={() => setIsReportModalOpen(false)}
           initialData={analysisResult}
           onShowToast={showToast}
+          onSubmitCustom={handleUserReportSubmit}
         />
       )}
 

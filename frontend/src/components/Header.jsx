@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Bell, UserCheck, Shield } from 'lucide-react';
+import { Globe, Bell, User, ShieldAlert, LogOut, LogIn } from 'lucide-react';
 
-export default function Header({ currentLang, onLanguageChange, userName = 'Sai Krishna', unreadCount = 0, onOpenNotifications, onSwitchUser }) {
+export default function Header({ currentLang, onLanguageChange, unreadCount = 0, onOpenNotifications, currentUser, onOpenLogin, onLogout }) {
   const { t } = useTranslation();
 
   const languages = [
@@ -12,8 +12,10 @@ export default function Header({ currentLang, onLanguageChange, userName = 'Sai 
     { code: 'ta', name: 'Tamil', native: 'தமிழ்' }
   ];
 
+  const isAdmin = currentUser?.role === 'admin';
+
   return (
-    <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 lg:px-8 py-3.5 shadow-xl">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 lg:px-8 py-3.5 shadow-xs">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
 
         {/* Brand & Logo */}
@@ -22,48 +24,63 @@ export default function Header({ currentLang, onLanguageChange, userName = 'Sai 
             <img
               src="/logo.png"
               alt="BharathShield Logo"
-              className="w-10 h-10 object-contain rounded-2xl border border-slate-800 bg-slate-900 p-0.5 shadow-lg shadow-teal-500/10"
+              className="w-10 h-10 object-contain rounded-2xl border border-slate-200 bg-slate-50 p-0.5 shadow-xs"
             />
-            <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-slate-950"></span>
+            <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white"></span>
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-extrabold tracking-tight text-white font-display">
+              <h1 className="text-lg font-extrabold tracking-tight text-slate-900 font-display">
                 {t('app.name')}
               </h1>
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/30">
-                PRO-SHIELD
+              <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                isAdmin ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-teal-50 text-teal-700 border-teal-200'
+              }`}>
+                {isAdmin ? 'ADMIN CONTROL' : 'PRO-SHIELD'}
               </span>
             </div>
-            <p className="text-xs text-slate-400 hidden sm:block font-medium">
+            <p className="text-xs text-slate-500 hidden sm:block font-medium">
               {t('app.tagline')}
             </p>
           </div>
         </div>
 
-        {/* User Identity, Notification Bell & Language Dropdown */}
+        {/* User Identity, Notifications & Language */}
         <div className="flex items-center gap-3">
 
-          {/* User Profile Identity Switcher */}
-          <button
-            onClick={onSwitchUser}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-xs text-slate-200 transition-all font-medium"
-            title="Switch User Profile"
-          >
-            <UserCheck className="w-4 h-4 text-teal-400" />
-            <span className="font-bold">Namaste, {userName}</span>
-          </button>
+          {/* User Account / Role Badge */}
+          {currentUser ? (
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-800">
+              {isAdmin ? <ShieldAlert className="w-4 h-4 text-rose-600" /> : <User className="w-4 h-4 text-teal-600" />}
+              <span>{currentUser.displayName} ({currentUser.role.toUpperCase()})</span>
+              <button
+                onClick={onLogout}
+                className="ml-1 text-slate-400 hover:text-rose-600 p-0.5 rounded"
+                title="Logout"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenLogin}
+              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Login</span>
+            </button>
+          )}
 
           {/* Notification Alert Center Bell */}
           <button
             onClick={onOpenNotifications}
-            className="relative p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition-all"
+            className="relative p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 hover:text-teal-700 hover:border-teal-300 transition-all"
             title="Security Notifications"
           >
             <Bell className="w-4.5 h-4.5" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white font-mono text-[9px] font-extrabold flex items-center justify-center animate-pulse">
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white font-mono text-[9px] font-extrabold flex items-center justify-center animate-pulse">
                 {unreadCount}
               </span>
             )}
@@ -71,16 +88,16 @@ export default function Header({ currentLang, onLanguageChange, userName = 'Sai 
 
           {/* Language Selector Dropdown */}
           <div className="relative flex items-center">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold hover:border-slate-700 transition-all cursor-pointer">
-              <Globe className="w-4 h-4 text-teal-400 shrink-0" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-xs font-semibold hover:border-teal-300 transition-all cursor-pointer">
+              <Globe className="w-4 h-4 text-teal-600 shrink-0" />
               <select
                 value={currentLang}
                 onChange={(e) => onLanguageChange(e.target.value)}
-                className="bg-transparent text-slate-200 font-semibold focus:outline-none cursor-pointer pr-1 text-xs"
+                className="bg-transparent text-slate-800 font-semibold focus:outline-none cursor-pointer pr-1 text-xs"
                 aria-label={t('header.selectLanguage')}
               >
                 {languages.map((lang) => (
-                  <option key={lang.code} value={lang.code} className="bg-slate-900 text-slate-200 py-1">
+                  <option key={lang.code} value={lang.code} className="bg-white text-slate-900 py-1">
                     {lang.native} ({lang.name})
                   </option>
                 ))}
