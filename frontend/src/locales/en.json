@@ -14,6 +14,10 @@
   "nav": {
     "menuTitle": "Security Menu",
     "home": "Home",
+    "quickScan": "Quick Scan",
+    "protect": "Protect",
+    "alerts": "Alerts",
+    "family": "Family",
     "analyze": "Analyze SMS",
     "history": "History",
     "learn": "Stay Safe",
@@ -21,6 +25,34 @@
     "report": "Report Scam",
     "dashboard": "Dashboard",
     "settings": "Settings"
+  },
+  "onboarding": {
+    "title": "Who do you want to protect?",
+    "subtitle": "BharathShield shields you & your loved ones from digital fraud — tell us who needs protection.",
+    "myselfTitle": "Just myself",
+    "myselfDesc": "Personal scam protection for daily life",
+    "familyTitle": "My family",
+    "familyDesc": "Protect parents, spouse & children too",
+    "protectFamilyBtn": "Protect Family Now →",
+    "protectMyselfBtn": "Protect Myself Now →"
+  },
+  "quickScan": {
+    "title": "Quick Security Vector Scan",
+    "subtitle": "Scan SMS, URLs, Phone Numbers, UPI IDs, APK files, or Screenshots for digital fraud.",
+    "vSms": "SMS",
+    "vUrl": "URL",
+    "vPhone": "Phone No.",
+    "vUpi": "UPI ID",
+    "vApk": "APK File",
+    "vScreenshot": "Screenshot"
+  },
+  "family": {
+    "title": "Family Circle Protection",
+    "subtitle": "Protect your family members from digital scams with real-time threat alerts."
+  },
+  "notifications": {
+    "title": "Security Alert Center",
+    "subtitle": "Real-time threat alerts and system security updates."
   },
   "analyzer": {
     "title": "SMS Threat Analyzer",
@@ -42,7 +74,7 @@
     "detectedLang": "Detected Language",
     "scamType": "Scam Category",
     "senderId": "Sender Header ID",
-    "whyHeader": "Explainable Threat Breakdown",
+    "whyHeader": "Why is this dangerous?",
     "whySafeHeader": "Why does this message appear safe?",
     "urlsHeader": "Embedded Web Links Analysis",
     "recsHeader": "Recommended Safety Actions",
@@ -54,9 +86,11 @@
     "SAFE": "SAFE",
     "SUSPICIOUS": "SUSPICIOUS",
     "PHISHING": "HIGH RISK PHISHING",
+    "CRITICAL": "CRITICAL THREAT",
     "SAFE_BANNER": "🟢 SAFE / LOW RISK",
-    "SUSPICIOUS_BANNER": "🟠 SUSPICIOUS MESSAGE",
-    "PHISHING_BANNER": "🔴 PHISHING / HIGH RISK"
+    "SUSPICIOUS_BANNER": "🟡 SUSPICIOUS MESSAGE",
+    "PHISHING_BANNER": "🔴 HIGH RISK PHISHING",
+    "CRITICAL_BANNER": "🚨 CRITICAL THREAT DETECTED"
   },
   "senderStatus": {
     "VERIFIED_FORMAT": "Standard Commercial Header",
@@ -84,22 +118,6 @@
     "SAFE_NO_URGENT_LANGUAGE": "No coercive or account-blocking threats detected",
     "SAFE_INFORMATIONAL": "Appears to be a standard informational or transactional message",
     "SUSPICIOUS_URL": "Contains suspicious or unverified web links",
-    "HTTP_UNSECURE": "Unencrypted HTTP URL link detected (+10)",
-    "IP_ADDRESS_URL": "Direct IP-address link detected (+25)",
-    "URL_SHORTENER": "URL shortener service obfuscation detected (+15)",
-    "SUSPICIOUS_TLD": "Suspicious TLD extension detected (+15)",
-    "EXCESSIVE_SUBDOMAINS": "Excessive subdomain hierarchy detected (+15)",
-    "BRAND_IMPERSONATION_URL": "Possible brand domain mismatch detected (+30)",
-    "URGENCY": "Urgent coercive language & account blocking threat (+15)",
-    "FINANCIAL": "Financial reward / prize claim incentive (+20)",
-    "CREDENTIAL_REQS": "Requests sensitive credentials (OTP, PIN, Password, Aadhaar) (+25)",
-    "ACTION_COERCION": "Demands immediate link click or action (+15)",
-    "AUTHORITY_CLAIM": "Claims trusted authority / bank impersonation (+20)",
-    "PERSONAL_SENDER_IMPERSONATION": "Bank/Authority claim sent from personal mobile number (+15)",
-    "INTERNATIONAL_SENDER": "International sender number anomaly (+15)",
-    "MALFORMED_SENDER": "Malformed sender header format (+10)"
-  },
-  "signals": {
     "HTTP_UNSECURE": "Unencrypted HTTP URL link detected (+10)",
     "IP_ADDRESS_URL": "Direct IP-address link detected (+25)",
     "URL_SHORTENER": "URL shortener service obfuscation detected (+15)",
@@ -153,10 +171,10 @@
     "reportRecorded": "Thank you for contributing to community threat intelligence."
   },
   "history": {
-    "title": "Analysis History",
-    "subtitle": "Your past SMS scans stored locally with privacy sanitization.",
+    "title": "Threat History & Alerts Log",
+    "subtitle": "Your past threat detections and alerts scoped to your active account.",
     "clearAllBtn": "Clear History",
-    "noHistory": "No analysis history recorded yet. Analyze an SMS to populate history.",
+    "noHistory": "No analysis history recorded yet. Run a Quick Scan to populate history.",
     "clearConfirm": "Are you sure you want to clear all analysis history?",
     "filterAll": "All Languages",
     "colDate": "Date & Time",

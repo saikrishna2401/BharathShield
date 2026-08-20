@@ -7,6 +7,7 @@ const storageService = require('../services/storageService');
 
 async function handleAnalyze(req, res) {
   try {
+    const userId = req.body.userId || req.headers['x-user-id'] || 'user-101';
     const { message, sender, language } = req.body || {};
 
     // API Validation
@@ -34,8 +35,8 @@ async function handleAnalyze(req, res) {
     // Run multi-stage phishing detection
     const result = await analyzeSMS({ message, sender, language });
 
-    // Save anonymized record
-    await storageService.saveAnalysis(result, message);
+    // Save anonymized record scoped to user
+    await storageService.saveAnalysis(result, message, userId);
 
     return res.status(200).json(result);
   } catch (error) {

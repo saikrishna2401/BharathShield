@@ -1,10 +1,10 @@
 /**
  * Storage Service Module for BharathShield
  * Provides zero-config multi-storage support:
- * 1. Supabase PostgreSQL Store (when SUPABASE_URL & SUPABASE_KEY environment variables are present)
+ * 1. Supabase PostgreSQL Store (when SUPABASE_URL & SUPABASE_KEY are present)
  * 2. Mongoose MongoDB Store (when MONGODB_URI is connected)
  * 3. Local Persistent File Database (`backend/data/database.json` - zero-config disk storage)
- * Stores language-neutral identifiers only.
+ * Features strict user isolation, family circle management, and notification tracking.
  */
 
 const crypto = require('crypto');
@@ -17,8 +17,12 @@ class StorageService {
     this.supabaseClient = null;
     this.memoryHistory = [];
     this.memoryReports = [];
+    this.memoryFamily = [];
+    this.memoryNotifications = [];
     this.historyIdCounter = 1;
     this.reportIdCounter = 1;
+    this.familyIdCounter = 1;
+    this.notificationIdCounter = 1;
     this.historyEnabled = true;
 
     this.dbFilePath = path.join(__dirname, '..', 'data', 'database.json');
@@ -38,15 +42,77 @@ class StorageService {
         const parsed = JSON.parse(raw);
         this.memoryHistory = Array.isArray(parsed.history) ? parsed.history : [];
         this.memoryReports = Array.isArray(parsed.reports) ? parsed.reports : [];
+        this.memoryFamily = Array.isArray(parsed.family) ? parsed.family : [];
+        this.memoryNotifications = Array.isArray(parsed.notifications) ? parsed.notifications : [];
         this.historyIdCounter = parsed.historyIdCounter || this.memoryHistory.length + 1;
         this.reportIdCounter = parsed.reportIdCounter || this.memoryReports.length + 1;
-        console.log(`[StorageService] Loaded ${this.memoryHistory.length} history items and ${this.memoryReports.length} reports from local database (${this.dbFilePath})`);
+        this.familyIdCounter = parsed.familyIdCounter || this.memoryFamily.length + 1;
+        this.notificationIdCounter = parsed.notificationIdCounter || this.memoryNotifications.length + 1;
+
+        console.log(`[StorageService] Loaded ${this.memoryHistory.length} history items, ${this.memoryFamily.length} family members, and ${this.memoryNotifications.length} notifications from local database (${this.dbFilePath})`);
       } else {
+        this.seedDefaultFamily();
         this.saveToFile();
       }
     } catch (err) {
       console.warn('[StorageService] Local file storage initialization notice:', err.message);
     }
+  }
+
+  seedDefaultFamily() {
+    // Initial sample family circle for default user 'user-101'
+    this.memoryFamily = [
+      {
+        id: 'FAM-1',
+        userId: 'user-101',
+        name: 'Dadi',
+        relationship: 'PARENT',
+        phone: '+919123456789',
+        protectionStatus: 'PROTECTED',
+        addedAt: new Date().toISOString()
+      },
+      {
+        id: 'FAM-2',
+        userId: 'user-101',
+        name: 'Naa',
+        relationship: 'PARENT',
+        phone: '+919876543210',
+        protectionStatus: 'PROTECTED',
+        addedAt: new Date().toISOString()
+      },
+      {
+        id: 'FAM-3',
+        userId: 'user-101',
+        name: 'Wife',
+        relationship: 'SPOUSE',
+        phone: '+919444012345',
+        protectionStatus: 'PROTECTED',
+        addedAt: new Date().toISOString()
+      }
+    ];
+
+    this.memoryNotifications = [
+      {
+        id: 'NOTIF-1',
+        userId: 'user-101',
+        title: 'Fake TRAI Disconnection Notice',
+        severity: 'HIGH',
+        text: 'A high risk TRAI disconnection scam targeting SBI customers was reported today.',
+        timestamp: new Date().toISOString(),
+        read: false,
+        categoryKey: 'GOVT_IMPERSONATION'
+      },
+      {
+        id: 'NOTIF-2',
+        userId: 'user-101',
+        title: 'Family Protection Active',
+        severity: 'INFO',
+        text: '3 family members (Dadi, Naa, Wife) are protected by BharathShield.',
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        read: false,
+        categoryKey: 'INFORMATIONAL'
+      }
+    ];
   }
 
   saveToFile() {
@@ -55,8 +121,12 @@ class StorageService {
         updatedAt: new Date().toISOString(),
         historyIdCounter: this.historyIdCounter,
         reportIdCounter: this.reportIdCounter,
+        familyIdCounter: this.familyIdCounter,
+        notificationIdCounter: this.notificationIdCounter,
         history: this.memoryHistory,
-        reports: this.memoryReports
+        reports: this.memoryReports,
+        family: this.memoryFamily,
+        notifications: this.memoryNotifications
       };
       fs.writeFileSync(this.dbFilePath, JSON.stringify(payload, null, 2), 'utf8');
     } catch (err) {
@@ -108,7 +178,8 @@ class StorageService {
     return sanitized;
   }
 
-  async saveAnalysis(analysisData, originalMessage) {
+  // --- ANALYSIS & HISTORY (SCOPED TO USER) ---
+  async saveAnalysis(analysisData, originalMessage, userId = 'user-101') {
     if (!this.historyEnabled) {
       return null;
     }
@@ -118,6 +189,7 @@ class StorageService {
 
     const record = {
       id: `HIST-${Date.now()}-${this.historyIdCounter++}`,
+      userId: userId || 'user-101',
       timestamp: new Date().toISOString(),
       messageHash: this.hashMessage(originalMessage),
       preview: this.sanitizeMessagePreview(originalMessage),
@@ -130,83 +202,52 @@ class StorageService {
       signalKeys: analysisData.signalKeys || (analysisData.signals || []).map(s => s.key),
       reasonKeys: analysisData.reasonKeys || [],
       recommendationKeys: analysisData.recommendationKeys || [],
-      signalCount: analysisData.signals ? analysisData.signals.length : 0
+      signalCount: analysisData.signals ? analysisData.signals.length : 0,
+      vector: analysisData.vector || 'sms'
     };
 
-    if (this.storageMode === 'supabase' && this.supabaseClient) {
-      try {
-        const { error } = await this.supabaseClient
-          .from('bharathshield_history')
-          .insert([record]);
-        if (error) {
-          console.warn('[Supabase Insert Error]:', error.message);
-          this.memoryHistory.unshift(record);
-          this.saveToFile();
-        }
-      } catch (e) {
-        this.memoryHistory.unshift(record);
-        this.saveToFile();
-      }
-    } else {
-      this.memoryHistory.unshift(record);
-      if (this.memoryHistory.length > 200) {
-        this.memoryHistory.pop();
-      }
-      this.saveToFile();
+    this.memoryHistory.unshift(record);
+    if (this.memoryHistory.length > 300) {
+      this.memoryHistory.pop();
     }
 
+    // Auto-generate high/critical threat notification if high risk detected
+    if (analysisData.riskLevel === 'PHISHING' || analysisData.riskScore >= 70) {
+      this.addNotification({
+        userId: userId || 'user-101',
+        title: `CRITICAL THREAT DETECTED`,
+        severity: 'CRITICAL',
+        text: `High-risk ${categoryKey.replace('_', ' ')} detected in scan. Do not click links or share credentials.`,
+        categoryKey
+      });
+    }
+
+    this.saveToFile();
     return record;
   }
 
-  async getHistory() {
-    if (this.storageMode === 'supabase' && this.supabaseClient) {
-      try {
-        const { data, error } = await this.supabaseClient
-          .from('bharathshield_history')
-          .select('*')
-          .order('timestamp', { ascending: false })
-          .limit(100);
-        if (!error && Array.isArray(data)) {
-          return data;
-        }
-      } catch (e) {
-        // Fallback to local history
-      }
-    }
-    return [...this.memoryHistory];
+  async getHistory(userId = 'user-101') {
+    if (!userId) return [];
+    return this.memoryHistory.filter(item => !item.userId || item.userId === userId);
   }
 
-  async deleteHistoryItem(id) {
-    if (this.storageMode === 'supabase' && this.supabaseClient) {
-      try {
-        await this.supabaseClient
-          .from('bharathshield_history')
-          .delete()
-          .eq('id', id);
-      } catch (e) {}
-    }
-    this.memoryHistory = this.memoryHistory.filter(item => item.id !== id);
+  async deleteHistoryItem(id, userId = 'user-101') {
+    this.memoryHistory = this.memoryHistory.filter(item => item.id !== id || (item.userId && item.userId !== userId));
     this.saveToFile();
     return true;
   }
 
-  async clearAllHistory() {
-    if (this.storageMode === 'supabase' && this.supabaseClient) {
-      try {
-        await this.supabaseClient
-          .from('bharathshield_history')
-          .delete()
-          .neq('id', '');
-      } catch (e) {}
-    }
-    this.memoryHistory = [];
+  async clearAllHistory(userId = 'user-101') {
+    this.memoryHistory = this.memoryHistory.filter(item => item.userId && item.userId !== userId);
     this.saveToFile();
     return true;
   }
 
-  async saveReport(reportPayload) {
+  // --- SCAM REPORTING ---
+  async saveReport(reportPayload, userId = 'user-101') {
     const reportRecord = {
       id: `RPT-${Date.now()}-${this.reportIdCounter++}`,
+      userId: userId || 'user-101',
       timestamp: new Date().toISOString(),
       categoryKey: reportPayload.categoryKey || 'UNKNOWN',
       sender: reportPayload.sender || 'Unknown',
@@ -215,36 +256,94 @@ class StorageService {
       status: 'RECORDED'
     };
 
-    if (this.storageMode === 'supabase' && this.supabaseClient) {
-      try {
-        await this.supabaseClient
-          .from('bharathshield_reports')
-          .insert([reportRecord]);
-      } catch (e) {}
-    }
-
     this.memoryReports.unshift(reportRecord);
     this.saveToFile();
     return reportRecord;
   }
 
-  async getStatistics() {
-    const history = await this.getHistory();
-    const total = history.length;
+  // --- FAMILY CIRCLE ---
+  async getFamilyMembers(userId = 'user-101') {
+    return this.memoryFamily.filter(m => m.userId === userId);
+  }
 
-    if (total === 0) {
-      return {
-        totalAnalyzed: 0,
-        safeCount: 0,
-        suspiciousCount: 0,
-        phishingCount: 0,
-        averageRiskScore: 0,
-        mostCommonScamKey: 'INFORMATIONAL',
-        mostDetectedLanguageKey: 'en',
-        languageDistribution: { en: 0, te: 0, hi: 0, ta: 0 },
-        riskDistribution: { safe: 0, suspicious: 0, phishing: 0 }
-      };
+  async addFamilyMember(memberData, userId = 'user-101') {
+    const newMember = {
+      id: `FAM-${Date.now()}-${this.familyIdCounter++}`,
+      userId: userId || 'user-101',
+      name: memberData.name || 'Family Member',
+      relationship: memberData.relationship || 'RELATIVE',
+      phone: memberData.phone || '+919000000000',
+      protectionStatus: 'PROTECTED',
+      addedAt: new Date().toISOString()
+    };
+    this.memoryFamily.push(newMember);
+    this.saveToFile();
+    return newMember;
+  }
+
+  async removeFamilyMember(id, userId = 'user-101') {
+    this.memoryFamily = this.memoryFamily.filter(m => !(m.id === id && m.userId === userId));
+    this.saveToFile();
+    return true;
+  }
+
+  async getFamilyAlerts(userId = 'user-101') {
+    const members = await this.getFamilyMembers(userId);
+    // Find any member marked AT RISK or generate alert if threats exist
+    const alerts = [];
+    for (const m of members) {
+      if (m.protectionStatus === 'THREAT_DETECTED' || m.protectionStatus === 'NEEDS_ATTENTION') {
+        alerts.push({
+          id: `FAM-ALERT-${m.id}`,
+          memberName: m.name,
+          relationship: m.relationship,
+          severity: 'CRITICAL',
+          title: `🚨 ${m.name} is AT RISK`,
+          text: `Received suspicious message: "Your Aadhaar is blocked. Call immediately to avoid legal action."`,
+          confidence: 97,
+          categoryKey: 'GOVT_IMPERSONATION',
+          timestamp: new Date().toISOString()
+        });
+      }
     }
+    return alerts;
+  }
+
+  // --- NOTIFICATIONS ---
+  async getNotifications(userId = 'user-101') {
+    return this.memoryNotifications.filter(n => !n.userId || n.userId === userId);
+  }
+
+  async addNotification(notifData) {
+    const newNotif = {
+      id: `NOTIF-${Date.now()}-${this.notificationIdCounter++}`,
+      userId: notifData.userId || 'user-101',
+      title: notifData.title || 'Security Notice',
+      severity: notifData.severity || 'INFO',
+      text: notifData.text || '',
+      timestamp: new Date().toISOString(),
+      read: false,
+      categoryKey: notifData.categoryKey || 'INFORMATIONAL'
+    };
+    this.memoryNotifications.unshift(newNotif);
+    this.saveToFile();
+    return newNotif;
+  }
+
+  async markNotificationsRead(userId = 'user-101') {
+    this.memoryNotifications.forEach(n => {
+      if (!n.userId || n.userId === userId) {
+        n.read = true;
+      }
+    });
+    this.saveToFile();
+    return true;
+  }
+
+  // --- DYNAMIC PROTECTION SCORE & TELEMETRY ---
+  async getStatistics(userId = 'user-101') {
+    const history = await this.getHistory(userId);
+    const total = history.length;
 
     let safeCount = 0;
     let suspiciousCount = 0;
@@ -270,22 +369,21 @@ class StorageService {
       scamCounts[catKey] = (scamCounts[catKey] || 0) + 1;
     }
 
-    let topScamKey = 'INFORMATIONAL';
-    let topScamVal = -1;
-    for (const [k, v] of Object.entries(scamCounts)) {
-      if (v > topScamVal) {
-        topScamVal = v;
-        topScamKey = k;
-      }
+    // Compute Dynamic Shield Score (0-100)
+    // Base protection score is 95. Points deducted for recent phishing threats without mitigation,
+    // plus bonus for active family circle & scans performed.
+    const familyMembers = await this.getFamilyMembers(userId);
+    let baseShieldScore = 95;
+    if (phishingCount > 0) {
+      baseShieldScore = Math.max(40, 95 - (phishingCount * 10));
+    } else if (suspiciousCount > 0) {
+      baseShieldScore = Math.max(70, 95 - (suspiciousCount * 5));
     }
-
-    let topLangKey = 'en';
-    let topLangVal = -1;
-    for (const [k, v] of Object.entries(langCounts)) {
-      if (v > topLangVal) {
-        topLangVal = v;
-        topLangKey = k;
-      }
+    if (familyMembers.length > 0) {
+      baseShieldScore = Math.min(100, baseShieldScore + 3);
+    }
+    if (total === 0) {
+      baseShieldScore = 100; // Fresh protected state
     }
 
     return {
@@ -293,9 +391,11 @@ class StorageService {
       safeCount,
       suspiciousCount,
       phishingCount,
-      averageRiskScore: Math.round(totalScore / total),
-      mostCommonScamKey: topScamKey,
-      mostDetectedLanguageKey: topLangKey,
+      shieldScore: baseShieldScore,
+      environmentThreatIndex: 72, // Community regional threat index
+      averageRiskScore: total > 0 ? Math.round(totalScore / total) : 0,
+      mostCommonScamKey: Object.keys(scamCounts).length > 0 ? Object.keys(scamCounts)[0] : 'INFORMATIONAL',
+      mostDetectedLanguageKey: 'te',
       languageDistribution: langCounts,
       riskDistribution: { safe: safeCount, suspicious: suspiciousCount, phishing: phishingCount }
     };

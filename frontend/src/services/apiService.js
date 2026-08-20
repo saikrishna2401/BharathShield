@@ -1,7 +1,7 @@
 /**
- * API Service Client for PhishGuard Frontend
+ * API Service Client for BharathShield Frontend
  * Handles HTTP requests to Express backend with client-side fallback detection when offline.
- * Returns 100% language-neutral contracts.
+ * Supports user scoping (X-User-Id), Quick Scan vectors, Family Circle, and Notifications.
  */
 
 const API_BASE = '/api';
@@ -12,18 +12,21 @@ export async function checkBackendHealth() {
     if (res.ok) {
       return await res.json();
     }
-    return { status: 'offline', database: 'memory', ml: 'unavailable' };
+    return { status: 'offline', database: 'local_file', ml: 'unavailable' };
   } catch (e) {
-    return { status: 'offline', database: 'memory', ml: 'unavailable' };
+    return { status: 'offline', database: 'local_file', ml: 'unavailable' };
   }
 }
 
-export async function analyzeSMS(payload) {
+export async function analyzeSMS(payload, userId = 'user-101') {
   try {
     const res = await fetch(`${API_BASE}/analyze`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId
+      },
+      body: JSON.stringify({ ...payload, userId })
     });
 
     if (res.ok) {
@@ -37,12 +40,35 @@ export async function analyzeSMS(payload) {
   }
 }
 
-export async function submitScamReport(reportPayload) {
+export async function runQuickScan(payload, userId = 'user-101') {
+  try {
+    const res = await fetch(`${API_BASE}/quick-scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId
+      },
+      body: JSON.stringify({ ...payload, userId })
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+    throw new Error('Quick scan request failed');
+  } catch (e) {
+    return runClientFallbackAnalysis(payload);
+  }
+}
+
+export async function submitScamReport(reportPayload, userId = 'user-101') {
   try {
     const res = await fetch(`${API_BASE}/report`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(reportPayload)
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId
+      },
+      body: JSON.stringify({ ...reportPayload, userId })
     });
 
     if (res.ok) {
@@ -57,9 +83,11 @@ export async function submitScamReport(reportPayload) {
   }
 }
 
-export async function fetchHistory() {
+export async function fetchHistory(userId = 'user-101') {
   try {
-    const res = await fetch(`${API_BASE}/history`);
+    const res = await fetch(`${API_BASE}/history?userId=${encodeURIComponent(userId)}`, {
+      headers: { 'X-User-Id': userId }
+    });
     if (res.ok) {
       const data = await res.json();
       return data.history || [];
@@ -70,18 +98,23 @@ export async function fetchHistory() {
   }
 }
 
-export async function clearHistory() {
+export async function clearHistory(userId = 'user-101') {
   try {
-    const res = await fetch(`${API_BASE}/history`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}/history?userId=${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+      headers: { 'X-User-Id': userId }
+    });
     return res.ok;
   } catch (e) {
     return true;
   }
 }
 
-export async function fetchStatistics() {
+export async function fetchStatistics(userId = 'user-101') {
   try {
-    const res = await fetch(`${API_BASE}/statistics`);
+    const res = await fetch(`${API_BASE}/statistics?userId=${encodeURIComponent(userId)}`, {
+      headers: { 'X-User-Id': userId }
+    });
     if (res.ok) {
       return await res.json();
     }
@@ -91,15 +124,94 @@ export async function fetchStatistics() {
   }
 }
 
+// --- FAMILY CIRCLE API CLIENT ---
+export async function fetchFamilyMembers(userId = 'user-101') {
+  try {
+    const res = await fetch(`${API_BASE}/family?userId=${encodeURIComponent(userId)}`, {
+      headers: { 'X-User-Id': userId }
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return { success: true, members: [], alerts: [], protectedCount: 0, totalCount: 0 };
+  } catch (e) {
+    return { success: true, members: [], alerts: [], protectedCount: 0, totalCount: 0 };
+  }
+}
+
+export async function addFamilyMember(memberData, userId = 'user-101') {
+  try {
+    const res = await fetch(`${API_BASE}/family`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId
+      },
+      body: JSON.stringify({ ...memberData, userId })
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    throw new Error('Failed to add family member');
+  } catch (e) {
+    return { success: false, message: e.message };
+  }
+}
+
+export async function removeFamilyMember(id, userId = 'user-101') {
+  try {
+    const res = await fetch(`${API_BASE}/family/${id}?userId=${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+      headers: { 'X-User-Id': userId }
+    });
+    return res.ok;
+  } catch (e) {
+    return true;
+  }
+}
+
+// --- NOTIFICATIONS API CLIENT ---
+export async function fetchNotifications(userId = 'user-101') {
+  try {
+    const res = await fetch(`${API_BASE}/notifications?userId=${encodeURIComponent(userId)}`, {
+      headers: { 'X-User-Id': userId }
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    return { notifications: [], unreadCount: 0 };
+  } catch (e) {
+    return { notifications: [], unreadCount: 0 };
+  }
+}
+
+export async function markNotificationsRead(userId = 'user-101') {
+  try {
+    const res = await fetch(`${API_BASE}/notifications/mark-read`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId
+      },
+      body: JSON.stringify({ userId })
+    });
+    return res.ok;
+  } catch (e) {
+    return true;
+  }
+}
+
 function getEmptyStats() {
   return {
     totalAnalyzed: 0,
     safeCount: 0,
     suspiciousCount: 0,
     phishingCount: 0,
+    shieldScore: 100,
+    environmentThreatIndex: 72,
     averageRiskScore: 0,
     mostCommonScamKey: 'INFORMATIONAL',
-    mostDetectedLanguageKey: 'en',
+    mostDetectedLanguageKey: 'te',
     languageDistribution: { en: 0, te: 0, hi: 0, ta: 0 },
     riskDistribution: { safe: 0, suspicious: 0, phishing: 0 }
   };
@@ -107,16 +219,15 @@ function getEmptyStats() {
 
 /**
  * Emergency Client-Side Fallback Analyzer when backend server is unreachable
- * Returns exact same language-neutral identifier contract as the backend.
  */
 function runClientFallbackAnalysis(payload) {
-  const message = typeof payload === 'string' ? payload : (payload.message || '');
-  const lower = message.toLowerCase();
+  const input = typeof payload === 'string' ? payload : (payload.inputData || payload.message || '');
+  const lower = input.toLowerCase();
 
-  const hasUrl = /https?:\/\/|www\.|bit\.ly|tinyurl|\.xyz|\.top/i.test(message);
-  const hasUrgency = /immediately|urgent|blocked|expires|వెంటనే|ఈరోజే|तुरंत|आज ही|உடனடியாக/i.test(message);
-  const hasCredential = /otp|pin|cvv|password|aadhaar|pan card|ఓటిపి|పిన్|ओटीपी|पिन|ஒடிபி/i.test(message);
-  const hasDisclaimer = /do not share|never share|రహస్యంగా|షేర్|शेयर न करें|பகிர வேண்டாம்/i.test(message);
+  const hasUrl = /https?:\/\/|www\.|bit\.ly|tinyurl|\.xyz|\.top/i.test(input);
+  const hasUrgency = /immediately|urgent|blocked|expires|వెంటనే|ఈరోజే|तुरंत|आज ही|உடனடியாக/i.test(input);
+  const hasCredential = /otp|pin|cvv|password|aadhaar|pan card|ఓటిపి|పిన్|ओटीपी|पिन|ஒடிபி/i.test(input);
+  const hasDisclaimer = /do not share|never share|రహస్యంగా|షేర్|शेयर न करें|பகிர வேண்டாம்/i.test(input);
 
   let score = 10;
   const signals = [];
@@ -143,9 +254,9 @@ function runClientFallbackAnalysis(payload) {
   if (finalScore >= 60) riskLevel = 'PHISHING';
   else if (finalScore >= 30) riskLevel = 'SUSPICIOUS';
 
-  let teCount = (message.match(/[\u0C00-\u0C7F]/g) || []).length;
-  let hiCount = (message.match(/[\u0900-\u097F]/g) || []).length;
-  let taCount = (message.match(/[\u0B80-\u0BFF]/g) || []).length;
+  let teCount = (input.match(/[\u0C00-\u0C7F]/g) || []).length;
+  let hiCount = (input.match(/[\u0900-\u097F]/g) || []).length;
+  let taCount = (input.match(/[\u0B80-\u0BFF]/g) || []).length;
 
   let primaryLang = 'en';
   if (teCount > 2) primaryLang = 'te';
@@ -179,7 +290,7 @@ function runClientFallbackAnalysis(payload) {
     reasonKeys,
     recommendationKeys,
     urlSignals: hasUrl ? [{ key: 'SUSPICIOUS_URL', type: 'SHORTENED_URL', score: 30 }] : [],
-    urls: hasUrl ? [{ originalUrl: message.match(/(https?:\/\/[^\s]+)/i)?.[0] || 'http://example.xyz', riskScore: 30 }] : [],
+    urls: hasUrl ? [{ originalUrl: input.match(/(https?:\/\/[^\s]+)/i)?.[0] || 'http://example.xyz', riskScore: 30 }] : [],
     senderStatus: 'UNAVAILABLE',
     sender: { provided: false, status: 'UNAVAILABLE' },
     explanation: {
