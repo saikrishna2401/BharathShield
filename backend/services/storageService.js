@@ -1,6 +1,6 @@
 /**
  * Storage Service Module for BharathShield
- * Zero-config multi-storage support with User & Admin role access,
+ * Zero-config multi-storage support with strict user isolation,
  * Scam Report Management for Admins, and notification tracking.
  */
 
@@ -38,7 +38,7 @@ class StorageService {
       this.memoryNotifications = [
         {
           id: 'NOTIF-1',
-          userId: 'user',
+          userId: 'global',
           title: 'BharathShield Active',
           severity: 'INFO',
           text: 'Real-time anti-phishing shield ready for User & Admin monitoring.',
@@ -119,18 +119,19 @@ class StorageService {
     return sanitized;
   }
 
-  // --- ANALYSIS & HISTORY ---
-  async saveAnalysis(analysisData, originalMessage, userId = 'user') {
+  // --- ANALYSIS & HISTORY (STRICT USER ISOLATION) ---
+  async saveAnalysis(analysisData, originalMessage, userId = 'guest') {
     if (!this.historyEnabled) {
       return null;
     }
 
+    const cleanUserId = userId || 'guest';
     const categoryKey = analysisData.categoryKey ||
       (analysisData.scamCategory ? analysisData.scamCategory.categoryKey || analysisData.scamCategory.name : 'INFORMATIONAL');
 
     const record = {
       id: `HIST-${Date.now()}-${this.historyIdCounter++}`,
-      userId: userId || 'user',
+      userId: cleanUserId,
       timestamp: new Date().toISOString(),
       messageHash: this.hashMessage(originalMessage),
       preview: this.sanitizeMessagePreview(originalMessage),
@@ -148,7 +149,7 @@ class StorageService {
     };
 
     this.memoryHistory.unshift(record);
-    if (this.memoryHistory.length > 300) {
+    if (this.memoryHistory.length > 500) {
       this.memoryHistory.pop();
     }
 
@@ -157,7 +158,7 @@ class StorageService {
         userId: 'admin',
         title: `USER THREAT DETECTED`,
         severity: 'CRITICAL',
-        text: `User ${userId} scanned high-risk ${categoryKey.replace('_', ' ')}.`,
+        text: `User ${cleanUserId} scanned high-risk ${categoryKey.replace('_', ' ')}.`,
         categoryKey
       });
     }
@@ -166,33 +167,35 @@ class StorageService {
     return record;
   }
 
-  async getHistory(userId = 'user') {
+  async getHistory(userId = 'guest') {
     if (!userId) return [];
     if (userId === 'admin') return [...this.memoryHistory];
-    return this.memoryHistory.filter(item => !item.userId || item.userId === userId);
+    // Strict User Isolation: return only records matching this exact userId
+    return this.memoryHistory.filter(item => item.userId === userId);
   }
 
-  async deleteHistoryItem(id, userId = 'user') {
+  async deleteHistoryItem(id, userId = 'guest') {
     this.memoryHistory = this.memoryHistory.filter(item => item.id !== id);
     this.saveToFile();
     return true;
   }
 
-  async clearAllHistory(userId = 'user') {
+  async clearAllHistory(userId = 'guest') {
     if (userId === 'admin') {
       this.memoryHistory = [];
     } else {
-      this.memoryHistory = this.memoryHistory.filter(item => item.userId && item.userId !== userId);
+      this.memoryHistory = this.memoryHistory.filter(item => item.userId !== userId);
     }
     this.saveToFile();
     return true;
   }
 
   // --- SCAM REPORTING (USER SUBMITS -> ADMIN RECEIVES) ---
-  async saveReport(reportPayload, userId = 'user') {
+  async saveReport(reportPayload, userId = 'guest') {
+    const cleanUserId = userId || 'guest';
     const reportRecord = {
       id: `RPT-${Date.now()}-${this.reportIdCounter++}`,
-      userId: userId || 'user',
+      userId: cleanUserId,
       timestamp: new Date().toISOString(),
       categoryKey: reportPayload.categoryKey || 'UNKNOWN',
       sender: reportPayload.sender || 'Unknown',
@@ -209,7 +212,7 @@ class StorageService {
       userId: 'admin',
       title: `🚨 NEW USER SPAM REPORT`,
       severity: 'HIGH',
-      text: `User ${userId} submitted a ${reportRecord.categoryKey} spam report for sender ${reportRecord.sender}.`,
+      text: `User ${cleanUserId} submitted a ${reportRecord.categoryKey} spam report for sender ${reportRecord.sender}.`,
       categoryKey: reportRecord.categoryKey
     });
 
@@ -238,14 +241,14 @@ class StorageService {
   }
 
   // --- NOTIFICATIONS ---
-  async getNotifications(userId = 'user') {
-    return this.memoryNotifications.filter(n => !n.userId || n.userId === userId || userId === 'admin');
+  async getNotifications(userId = 'guest') {
+    return this.memoryNotifications.filter(n => n.userId === 'global' || n.userId === userId || userId === 'admin');
   }
 
   async addNotification(notifData) {
     const newNotif = {
       id: `NOTIF-${Date.now()}-${this.notificationIdCounter++}`,
-      userId: notifData.userId || 'user',
+      userId: notifData.userId || 'guest',
       title: notifData.title || 'Security Notice',
       severity: notifData.severity || 'INFO',
       text: notifData.text || '',
@@ -258,9 +261,9 @@ class StorageService {
     return newNotif;
   }
 
-  async markNotificationsRead(userId = 'user') {
+  async markNotificationsRead(userId = 'guest') {
     this.memoryNotifications.forEach(n => {
-      if (!n.userId || n.userId === userId || userId === 'admin') {
+      if (n.userId === 'global' || n.userId === userId || userId === 'admin') {
         n.read = true;
       }
     });
@@ -268,8 +271,8 @@ class StorageService {
     return true;
   }
 
-  // --- DYNAMIC PROTECTION SCORE & TELEMETRY ---
-  async getStatistics(userId = 'user') {
+  // --- DYNAMIC PROTECTION SCORE & TELEMETRY (STRICT USER SCOPED) ---
+  async getStatistics(userId = 'guest') {
     const history = await this.getHistory(userId);
     const total = history.length;
 
@@ -297,6 +300,7 @@ class StorageService {
       scamCounts[catKey] = (scamCounts[catKey] || 0) + 1;
     }
 
+    // Default start shield score for every user is 100
     let baseShieldScore = 100;
     if (phishingCount > 0) {
       baseShieldScore = Math.max(40, 100 - (phishingCount * 10));
@@ -306,8 +310,8 @@ class StorageService {
 
     return {
       totalAnalyzed: total,
-      totalReports: this.memoryReports.length,
-      newReportsCount: this.memoryReports.filter(r => r.status === 'NEW').length,
+      totalReports: userId === 'admin' ? this.memoryReports.length : this.memoryReports.filter(r => r.userId === userId).length,
+      newReportsCount: userId === 'admin' ? this.memoryReports.filter(r => r.status === 'NEW').length : 0,
       safeCount,
       suspiciousCount,
       phishingCount,

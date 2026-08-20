@@ -22,24 +22,44 @@ import { checkBackendHealth, analyzeSMS, fetchNotifications, submitScamReport } 
 
 const USER_STORAGE_KEY = 'bharathshield_current_user';
 const TAB_STORAGE_KEY = 'bharathshield_active_tab';
+const GUEST_ID_KEY = 'bharathshield_guest_device_id';
+
+function getOrCreateGuestDeviceId() {
+  try {
+    let guestId = localStorage.getItem(GUEST_ID_KEY);
+    if (!guestId) {
+      guestId = `guest-${Math.random().toString(36).substring(2, 8)}`;
+      localStorage.setItem(GUEST_ID_KEY, guestId);
+    }
+    return guestId;
+  } catch (e) {
+    return `guest-${Date.now().toString(36)}`;
+  }
+}
 
 export default function App() {
   const { i18n } = useTranslation();
   const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
 
-  // Restore session from localStorage across page reloads
+  // Restore session from localStorage or initialize fresh guest device ID
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem(USER_STORAGE_KEY);
-      if (savedUser) return JSON.parse(savedUser);
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed && parsed.username) return parsed;
+      }
     } catch (e) {
       console.warn('Failed to parse saved user session');
     }
+
+    // Default fresh guest session for new device
+    const guestId = getOrCreateGuestDeviceId();
     return {
-      username: 'user',
-      displayName: 'Standard User',
-      role: 'user',
-      token: 'token-user-session-1122'
+      username: guestId,
+      displayName: 'Guest User',
+      role: 'guest',
+      token: `token-${guestId}-session`
     };
   });
 
@@ -79,7 +99,7 @@ export default function App() {
   }, []);
 
   const loadNotificationsData = async () => {
-    const currentId = currentUser ? currentUser.username : 'user';
+    const currentId = currentUser ? currentUser.username : 'guest';
     const notifData = await fetchNotifications(currentId);
     if (notifData && notifData.notifications) {
       setNotifications(notifData.notifications);
@@ -122,28 +142,30 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    const defaultUser = {
-      username: 'user',
-      displayName: 'Standard User',
-      role: 'user',
-      token: 'token-user-session-1122'
-    };
-    setCurrentUser(defaultUser);
+    const freshGuestId = `guest-${Math.random().toString(36).substring(2, 8)}`;
     try {
+      localStorage.setItem(GUEST_ID_KEY, freshGuestId);
       localStorage.removeItem(USER_STORAGE_KEY);
       localStorage.setItem(TAB_STORAGE_KEY, 'dashboard');
     } catch (e) {}
 
+    const guestUser = {
+      username: freshGuestId,
+      displayName: 'Guest User',
+      role: 'guest',
+      token: `token-${freshGuestId}-session`
+    };
+
+    setCurrentUser(guestUser);
     setActiveTabState('dashboard');
-    showToast('Logged out of session', 'info');
-    setIsLoginOpen(true);
+    showToast('Logged out of session. Switched to fresh guest device mode.', 'info');
   };
 
   const handleAnalyze = async (payload) => {
     setIsLoading(true);
     setAnalysisResult(null);
 
-    const currentId = currentUser ? currentUser.username : 'user';
+    const currentId = currentUser ? currentUser.username : 'guest';
     const res = await analyzeSMS({
       ...payload,
       language: currentLang
@@ -168,7 +190,7 @@ export default function App() {
   };
 
   const handleUserReportSubmit = async (reportPayload) => {
-    const currentId = currentUser ? currentUser.username : 'user';
+    const currentId = currentUser ? currentUser.username : 'guest';
     await submitScamReport(reportPayload, currentId);
     showToast('Spam report submitted! Admin notified.', 'success');
     loadNotificationsData();
@@ -205,7 +227,7 @@ export default function App() {
           {/* VIEW: Dashboard (Home) */}
           {activeTab === 'dashboard' && (
             <DashboardView
-              currentUserId={currentUser ? currentUser.username : 'user'}
+              currentUserId={currentUser ? currentUser.username : 'guest'}
               onNavigate={setActiveTab}
               onShowToast={showToast}
             />
@@ -214,7 +236,7 @@ export default function App() {
           {/* VIEW: Quick Scan */}
           {activeTab === 'quickScan' && (
             <QuickScanView
-              currentUserId={currentUser ? currentUser.username : 'user'}
+              currentUserId={currentUser ? currentUser.username : 'guest'}
               onShowToast={showToast}
               onOpenReport={(res) => setIsReportModalOpen(true)}
             />
@@ -244,7 +266,7 @@ export default function App() {
           {/* VIEW: Alerts & History */}
           {activeTab === 'history' && (
             <HistoryView
-              currentUserId={currentUser ? currentUser.username : 'user'}
+              currentUserId={currentUser ? currentUser.username : 'guest'}
               onShowToast={showToast}
             />
           )}
@@ -288,7 +310,7 @@ export default function App() {
           onClose={() => setIsNotificationsOpen(false)}
           notifications={notifications}
           unreadCount={unreadCount}
-          currentUserId={currentUser ? currentUser.username : 'user'}
+          currentUserId={currentUser ? currentUser.username : 'guest'}
           onRefresh={loadNotificationsData}
         />
       )}
